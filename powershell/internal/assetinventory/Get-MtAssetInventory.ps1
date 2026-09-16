@@ -91,5 +91,9 @@ function Get-MtAssetInventory {
         }
     }
 
-    return @(Select-MtAssetByType -Assets $inventory | Sort-Object System, Type, DisplayName)
+    # Assign first: Select-MtAssetByType returns a comma-forced array, which a direct pipe into
+    # Sort-Object would hand over as one object instead of enumerating it.
+    $filtered = Select-MtAssetByType -Assets $inventory
+
+    return @($filtered | Sort-Object System, Type, DisplayName)
 }
