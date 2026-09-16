@@ -132,6 +132,22 @@
         # The path to the file to save the test results in html format. The filename should include an .html extension.
         [string] $OutputHtmlFile,
 
+        # Collect the asset inventory: the consolidated list of objects the run touched.
+        # Adds the AssetInventory property to the results, the Assets page to the html report and,
+        # with -OutputFolder, the <name>-assets.json file (plus -assets.csv with -ExportCsv).
+        # Off by default because it enlarges the report; it is enabled automatically when
+        # -HidePiiFromReport is used, since redaction is driven by the inventory.
+        [switch] $IncludeAssetInventory,
+
+        # Controls whether user display names and object ids are replaced with stable asset ids
+        # in the generated reports.
+        # Never (default): no redaction.
+        # Always: redact from every generated output (html, json, markdown, csv, Excel, assets json and csv).
+        # OnlyFromHtml: redact from the html report only, so the machine readable exports keep the
+        # real identifiers for follow up while the shareable report does not.
+        [ValidateSet('Never', 'Always', 'OnlyFromHtml')]
+        [string] $HidePiiFromReport = 'Never',
+
         # The path to the file to save the test results in markdown format. The filename should include a .md extension.
         [string] $OutputMarkdownFile,
 
@@ -250,9 +266,15 @@
             $out.OutputMarkdownFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName).md"
             $out.OutputMarkdownSummaryFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName)-summary.md"
             $out.OutputJsonFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName).json"
+            if ($IncludeAssetInventory.IsPresent) {
+                $out.OutputAssetsJsonFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName)-assets.json"
+            }
 
             if ($ExportCsv.IsPresent) {
                 $out.OutputCsvFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName).csv"
+                if ($IncludeAssetInventory.IsPresent) {
+                    $out.OutputAssetsCsvFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName)-assets.csv"
+                }
             }
             if ($ExportExcel.IsPresent) {
                 $out.OutputExcelFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName).xlsx"
@@ -325,6 +347,12 @@
     # Reset the graph cache and urls to avoid stale data.
     Clear-ModuleVariable
 
+    # Redaction maps user identities onto their asset ids, so it needs the inventory even when
+    # the caller did not ask for the Assets page. Collect it in that case, but only surface it
+    # in the results and output files when -IncludeAssetInventory was actually requested.
+    $collectAssetInventory = $IncludeAssetInventory.IsPresent -or $HidePiiFromReport -ne 'Never'
+    $__MtSession.IncludeAssetInventory = $collectAssetInventory
+
     if (-not $DisableTelemetry) {
         Write-Telemetry -EventName InvokeMaester
     }
@@ -362,7 +390,9 @@
         OutputMarkdownFile        = $OutputMarkdownFile
         OutputMarkdownSummaryFile = $OutputMarkdownSummaryFile
         OutputJsonFile            = $OutputJsonFile
+        OutputAssetsJsonFile      = $null
         OutputCsvFile             = $null
+        OutputAssetsCsvFile       = $null
         OutputExcelFile           = $null
     }
 
@@ -505,37 +535,90 @@
             }
         }
 
-        $maesterResults = ConvertTo-MtMaesterResult -PesterResults $PesterResults -OutputFiles $out -InvokeMaesterCommand $invokeMaesterCommand -PesterConfiguration $pesterConfig -SkipVersionCheck:$SkipVersionCheck
+        $maesterResults = ConvertTo-MtMaesterResult -PesterResults $PesterResults -OutputFiles $out -InvokeMaesterCommand $invokeMaesterCommand -PesterConfiguration $pesterConfig -SkipVersionCheck:$SkipVersionCheck -IncludeAssetInventory:$collectAssetInventory
+
+        # 'Always' redacts every generated output, 'OnlyFromHtml' leaves the machine readable
+        # exports intact so findings can still be traced back to the real objects.
+        $redactNonHtml = $HidePiiFromReport -eq 'Always'
+        $reportPiiReplacements = @{}
+        if ($HidePiiFromReport -ne 'Never') {
+            $reportPiiReplacements = Get-MtReportPiiReplacementMap -MaesterResults $maesterResults
+        }
+
+        # Drop the inventory again when it was only collected to drive redaction, so the reports
+        # stay the size the caller asked for and the Assets page is not silently turned on.
+        if ($collectAssetInventory -and -not $IncludeAssetInventory.IsPresent) {
+            $maesterResults.PSObject.Properties.Remove('AssetInventory')
+        }
+
+        # Csv and Excel are produced by Convert-MtResultsToFlatObject, which writes the file
+        # itself, so redaction has to happen on a copy of the results rather than on the output.
+        $exportResults = $maesterResults
+        if ($redactNonHtml -and $reportPiiReplacements.Count -gt 0) {
+            $exportResults = $maesterResults | ConvertTo-Json -Depth 5 -WarningAction SilentlyContinue |
+                ConvertTo-MtRedactedReportContent -ReplacementMap $reportPiiReplacements -JsonEncoded |
+                    ConvertFrom-Json
+        }
 
         if (![string]::IsNullOrEmpty($out.OutputJsonFile)) {
-            $maesterResults | ConvertTo-Json -Depth 5 -WarningAction SilentlyContinue | Out-File -FilePath $out.OutputJsonFile -Encoding UTF8
+            $output = $maesterResults | ConvertTo-Json -Depth 5 -WarningAction SilentlyContinue
+            if ($redactNonHtml) {
+                $output = ConvertTo-MtRedactedReportContent -Content $output -ReplacementMap $reportPiiReplacements -JsonEncoded
+            }
+            $output | Out-File -FilePath $out.OutputJsonFile -Encoding UTF8
+        }
+
+        if (![string]::IsNullOrEmpty($out.OutputAssetsJsonFile) -and $maesterResults.AssetInventory) {
+            Write-MtProgress -Activity 'Creating asset inventory'
+            $output = $maesterResults.AssetInventory | ConvertTo-Json -Depth 5 -WarningAction SilentlyContinue
+            if ($redactNonHtml) {
+                $output = ConvertTo-MtRedactedReportContent -Content $output -ReplacementMap $reportPiiReplacements -JsonEncoded
+            }
+            $output | Out-File -FilePath $out.OutputAssetsJsonFile -Encoding UTF8
+        }
+
+        if (![string]::IsNullOrEmpty($out.OutputAssetsCsvFile) -and $maesterResults.AssetInventory) {
+            $output = $maesterResults.AssetInventory | Select-Object System, AnchorKind, Type, Id, UniqueId, DisplayName, PortalLink,
+            @{ Name = 'Tests'; Expression = { $_.Tests -join '; ' } },
+            @{ Name = 'Sources'; Expression = { $_.Sources -join '; ' } } |
+                ConvertTo-Csv -NoTypeInformation
+            if ($redactNonHtml) {
+                $output = @($output | ForEach-Object { ConvertTo-MtRedactedReportContent -Content $_ -ReplacementMap $reportPiiReplacements })
+            }
+            $output | Out-File -FilePath $out.OutputAssetsCsvFile -Encoding UTF8
         }
 
         if (![string]::IsNullOrEmpty($out.OutputMarkdownFile)) {
             Write-MtProgress -Activity 'Creating markdown report'
             $output = Get-MtMarkdownReport -MaesterResults $maesterResults
+            if ($redactNonHtml) {
+                $output = ConvertTo-MtRedactedReportContent -Content $output -ReplacementMap $reportPiiReplacements
+            }
             $output | Out-File -FilePath $out.OutputMarkdownFile -Encoding UTF8
         }
 
         if (![string]::IsNullOrEmpty($out.OutputMarkdownSummaryFile)) {
             Write-MtProgress -Activity 'Creating markdown summary report'
             $output = Get-MtMarkdownSummaryReport -MaesterResults $maesterResults
+            if ($redactNonHtml) {
+                $output = ConvertTo-MtRedactedReportContent -Content $output -ReplacementMap $reportPiiReplacements
+            }
             $output | Out-File -FilePath $out.OutputMarkdownSummaryFile -Encoding UTF8
         }
 
         if (![string]::IsNullOrEmpty($out.OutputCsvFile)) {
             Write-MtProgress -Activity 'Creating CSV'
-            Convert-MtResultsToFlatObject -InputObject $maesterResults -CsvFilePath $out.OutputCsvFile
+            Convert-MtResultsToFlatObject -InputObject $exportResults -CsvFilePath $out.OutputCsvFile
         }
 
         if (![string]::IsNullOrEmpty($out.OutputExcelFile)) {
             Write-MtProgress -Activity 'Creating Excel workbook'
-            Convert-MtResultsToFlatObject -InputObject $maesterResults -ExcelFilePath $out.OutputExcelFile
+            Convert-MtResultsToFlatObject -InputObject $exportResults -ExcelFilePath $out.OutputExcelFile
         }
 
         if (![string]::IsNullOrEmpty($out.OutputHtmlFile)) {
             Write-MtProgress -Activity 'Creating html report'
-            $output = Get-MtHtmlReport -MaesterResults $maesterResults
+            $output = Get-MtHtmlReport -MaesterResults $maesterResults -HidePiiFromReport $HidePiiFromReport
             $output | Out-File -FilePath $out.OutputHtmlFile -Encoding UTF8
             if (-not $NonInteractive.IsPresent) {
                 Write-Host "🔥 Maester test report generated at $($out.OutputHtmlFile)" -ForegroundColor Green

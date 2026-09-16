@@ -1,4 +1,4 @@
-Describe 'Get-MtHtmlReport' {
+﻿Describe 'Get-MtHtmlReport' {
     BeforeAll {
         # The function resolves the template relative to its own location (powershell/public/core/)
         # From the test directory (powershell/tests/functions/) the template is at ../../assets/
@@ -42,11 +42,19 @@ Describe 'Get-MtHtmlReport' {
             }
             Tests          = @(
                 [PSCustomObject]@{
-                    Index = 1; Id = 'MT.1001'; Title = 'Test One'
-                    Name = 'MT.1001: Test One'; Result = 'Passed'
-                    Severity = 'High'; Tag = @('MT.1001'); Block = 'Maester'
+                    Index = 1; Id = 'MT.1033.0'; Title = 'User should be blocked from using legacy authentication (user@contoso.com)'
+                    Name = 'MT.1033.0: User should be blocked from using legacy authentication (user@contoso.com)'; Result = 'Passed'
+                    Severity = 'High'; Tag = @('MT.1033'); Block = 'Maester'
                     Duration = '00:00:01'; ErrorRecord = @()
-                    ResultDetail = [PSCustomObject]@{ TestDescription = 'Desc'; TestResult = 'OK' }
+                    ResultDetail = [PSCustomObject]@{ TestDescription = 'Desc'; TestResult = 'user@contoso.com (11111111-1111-1111-1111-111111111111)' }
+                }
+            )
+            AssetInventory = @(
+                [PSCustomObject]@{
+                    System = 'EntraID'; AnchorKind = 'Instance'; Type = 'User'
+                    Id = '11111111-1111-1111-1111-111111111111'; UniqueId = 'asset-user-001'
+                    DisplayName = 'user@contoso.com'; PortalLink = 'https://example.test/11111111-1111-1111-1111-111111111111'
+                    Tests = @('MT.1033.0'); Sources = @('GraphObjects')
                 }
             )
             Blocks         = @(
@@ -126,13 +134,38 @@ Describe 'Get-MtHtmlReport' {
         It 'Should contain the test data' {
             $html = Get-MtHtmlReport -MaesterResults $singleTenant
 
-            $html | Should -BeLike '*MT.1001*'
+            $html | Should -BeLike '*MT.1033.0*'
         }
 
         It 'Should contain emergency access account config data' {
             $html = Get-MtHtmlReport -MaesterResults $singleTenant
 
             $html | Should -BeLike '*BreakGlass1@contoso.com*'
+        }
+
+        It 'Should keep user PII when HidePiiFromReport is Never' {
+            $html = Get-MtHtmlReport -MaesterResults $singleTenant -HidePiiFromReport Never
+
+            $html | Should -BeLike '*user@contoso.com*'
+        }
+
+        It 'Should default to keeping user PII' {
+            $html = Get-MtHtmlReport -MaesterResults $singleTenant
+
+            $html | Should -BeLike '*user@contoso.com*'
+        }
+
+        It 'Should replace user PII with the asset unique ID for <_>' -ForEach @('Always', 'OnlyFromHtml') {
+            $html = Get-MtHtmlReport -MaesterResults $singleTenant -HidePiiFromReport $_
+
+            $html | Should -BeLike '*asset-user-001*'
+            $html | Should -Not -BeLike '*user@contoso.com*'
+            $html | Should -Not -BeLike '*11111111-1111-1111-1111-111111111111*'
+        }
+
+        It 'Should reject an unknown HidePiiFromReport value' {
+            { Get-MtHtmlReport -MaesterResults $singleTenant -HidePiiFromReport 'Sometimes' } |
+                Should -Throw
         }
 
         It 'Should not contain sample data from the template' {

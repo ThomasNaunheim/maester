@@ -1,4 +1,4 @@
-<#
+﻿<#
 .DISCLAIMER
 	THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 	ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
@@ -31,6 +31,7 @@ $__MtSession = @{
 	ADCache                = @{}                 # Active Directory data cache
 	ADConnection           = $null               # Active Directory connection state
 	ADCollectionTime       = $null               # Timestamp of last AD data collection
+	IncludeAssetInventory  = $false              # Set by Invoke-Maester -IncludeAssetInventory; gates per-test asset capture
 }
 New-Variable -Name __MtSession -Value $__MtSession -Scope Script -Force
 

@@ -42,7 +42,12 @@
         # The Maester test results returned from `Invoke-Pester -PassThru | ConvertTo-MtMaesterResult`
         # or from `Merge-MtMaesterResult` for multi-tenant reports.
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true)]
-        [psobject] $MaesterResults
+        [psobject] $MaesterResults,
+
+        # Controls whether user display names and object ids are replaced with stable asset ids.
+        # Never: keep the values as-is. Always / OnlyFromHtml: redact them from this html report.
+        [ValidateSet('Never', 'Always', 'OnlyFromHtml')]
+        [string] $HidePiiFromReport = 'Never'
     )
 
     process {
@@ -52,6 +57,10 @@
 
         Write-Verbose "Generating HTML report."
         $json = $MaesterResults | ConvertTo-Json -Depth $depth -Compress -WarningAction Ignore
+        if ($HidePiiFromReport -ne 'Never') {
+            $replacements = Get-MtReportPiiReplacementMap -MaesterResults $MaesterResults
+            $json = ConvertTo-MtRedactedReportContent -Content $json -ReplacementMap $replacements -JsonEncoded
+        }
 
         $htmlFilePath = Join-Path -Path $PSScriptRoot -ChildPath '../../assets/ReportTemplate.html'
         $templateHtml = Get-Content -Path $htmlFilePath -Raw

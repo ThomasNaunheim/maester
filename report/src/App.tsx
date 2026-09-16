@@ -8,6 +8,7 @@ import { TenantProvider } from "@/context/TenantContext"
 
 // Import pages
 import HomePage from "@/pages/HomePage"
+import AssetsPage from "@/pages/AssetsPage"
 import SettingsPage from "@/pages/SettingsPage"
 import SystemPage from "@/pages/SystemPage"
 import ConfigPage from "@/pages/ConfigPage"
@@ -27,7 +28,7 @@ function ScrollToTop({ mainRef }: { mainRef: React.RefObject<HTMLElement | null>
     if (mainRef.current) {
       mainRef.current.scrollTo(0, 0)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
   return null
@@ -49,6 +50,7 @@ function App() {
                 <div className="p-6">
                   <Routes>
                     <Route path="/" element={<HomePage />} />
+                    <Route path="/assets" element={<AssetsPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/system" element={<SystemPage />} />
                     <Route path="/config" element={<ConfigPage />} />
