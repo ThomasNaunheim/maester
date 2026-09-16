@@ -160,6 +160,36 @@ This is why canonical type names matter: the same CA policy found via `-GraphObj
 via a markdown deep link must produce the same `Type` (`ConditionalAccessPolicy`) to
 collapse into a single asset with both tests attributed.
 
+## Asset type catalog (what counts as an asset)
+
+After the merge, `Select-MtAssetByType` filters the inventory against the catalog in
+`Get-MtAssetTypeDefinition`:
+
+| Bucket | Behaviour |
+| --- | --- |
+| `KnownTypes` | Systems whose `Type` values are curated and enumerable (`EntraID`, `DefenderXDR`, `ExchangeOnline`, `GitHub`). Listed types are inventoried. |
+| `ExcludedTypes` | Recognised types that are deliberately not assets. Dropped silently. |
+| Everything else | Systems absent from `KnownTypes` (`MicrosoftGraph`) pass through unchanged — their `Type` is a Graph resource path and cannot be enumerated. |
+
+Currently inventoried: `EntraID` — AccessPackage, AccessPackageCatalog, AppRegistration,
+AuthenticationMethod, AuthorizationPolicy, ConditionalAccessPolicy, ConsentPolicy, Device,
+DirectoryRole, Domains, Group, ServicePrincipal, User; `DefenderXDR` — Device;
+`ExchangeOnline` — SharingPolicy, TransportRule; `GitHub` — GitHubOrganization,
+GitHubRepository, GitHubResource.
+
+Excluded: `EntraID` — `EntraRecommendation`, `PimAlert`. Both describe a condition of the
+tenant (a recommendation, an alert), not an addressable object, so they are findings that
+belong in the test result, not rows in an object inventory.
+
+A record of a curated system whose type is **not** in either list is dropped and reported in
+a single `Write-Warning` summary (`System/Type (count)`), so a newly linked object type shows
+up as an explicit maintenance item instead of silently reaching the report. Add it to
+`KnownTypes` to inventory it, or to `ExcludedTypes` if it is not an asset.
+
+`ConvertTo-MtAssetRecord` also resolves type aliases before the record is built:
+`IdentityProtection` objects are the users at risk, so they are recorded as `User`
+(`Instance` with a user profile deep link) rather than as the Identity Protection blade.
+
 ## Extending detection
 
 - **New portal deep-link pattern** → add a row to the regex table in
@@ -171,6 +201,9 @@ collapse into a single asset with both tests attributed.
   `ConvertTo-MtAssetRecord`.
 - **New external system** → extend the cache walker in `Get-MtAssetInventoryFromCache`
   (or add a new source function and merge it in `Get-MtAssetInventory`).
+- **New object type reaching the inventory** → add it to `Get-MtAssetTypeDefinition`
+  (`KnownTypes` to keep it, `ExcludedTypes` to drop it); until then it is filtered out and
+  named in the dropped-types warning.
 
 ## Redacting user identities
 

@@ -36,6 +36,12 @@
         Devices           = 'Device'
     }
 
+    # GraphObjectType whose objects are really another type: the check links to a settings blade
+    # but passes the affected objects. IdentityProtection results are the users at risk.
+    $assetTypeAlias = @{
+        IdentityProtection = 'Users'
+    }
+
     $records = foreach ($item in $GraphObjects) {
         $id = Get-ObjectProperty $item 'id'
         $displayName = Get-ObjectProperty $item 'displayName'
@@ -47,6 +53,9 @@
         $type = $GraphObjectType
         if (-not $type -and $odataType -and $portalLinkTemplate.OdataTypeMapping.ContainsKey($odataType)) {
             $type = $portalLinkTemplate.OdataTypeMapping[$odataType]
+        }
+        if ($type -and $assetTypeAlias.ContainsKey($type)) {
+            $type = $assetTypeAlias[$type]
         }
 
         $portalLink = $null

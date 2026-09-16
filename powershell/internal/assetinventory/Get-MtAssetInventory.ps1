@@ -91,5 +91,5 @@ function Get-MtAssetInventory {
         }
     }
 
-    return @($inventory | Sort-Object System, Type, DisplayName)
+    return @(Select-MtAssetByType -Assets $inventory | Sort-Object System, Type, DisplayName)
 }
