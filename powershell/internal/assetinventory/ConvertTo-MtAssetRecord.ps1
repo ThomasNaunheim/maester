@@ -42,11 +42,20 @@
         IdentityProtection = 'Users'
     }
 
+    # Kept out of Get-MtPortalLinkTemplate: Get-GraphObjectMarkdown would render these types without a link.
+    # Applications are absent because markdown deep links identify them by appId, not object id.
+    $odataAssetType = @{
+        '#microsoft.graph.servicePrincipal'        = 'ServicePrincipal'
+        '#microsoft.graph.directoryRole'           = 'DirectoryRole'
+        '#microsoft.graph.conditionalAccessPolicy' = 'ConditionalAccessPolicy'
+    }
+
     $records = foreach ($item in $GraphObjects) {
         $id = Get-ObjectProperty $item 'id'
         $displayName = Get-ObjectProperty $item 'displayName'
+        $userPrincipalName = Get-ObjectProperty $item 'userPrincipalName'
         if ([string]::IsNullOrWhiteSpace($displayName) -and $GraphObjectType -eq 'Users') {
-            $displayName = Get-ObjectProperty $item 'userPrincipalName'
+            $displayName = $userPrincipalName
         }
         $odataType = Get-ObjectProperty $item '@odata.type'
 
@@ -74,16 +83,18 @@
         }
 
         [PSCustomObject]@{
-            System      = 'EntraID'
-            AnchorKind  = $anchorKind
-            Type        = if ($type -and $canonicalType.ContainsKey($type)) { $canonicalType[$type] }
+            System            = 'EntraID'
+            AnchorKind        = $anchorKind
+            Type              = if ($type -and $canonicalType.ContainsKey($type)) { $canonicalType[$type] }
             elseif ($type) { $type }
+            elseif ($odataType -and $odataAssetType.ContainsKey($odataType)) { $odataAssetType[$odataType] }
             elseif ($odataType) { $odataType }
             else { 'Unknown' }
-            Id          = $id
-            DisplayName = $displayName
-            PortalLink  = $portalLink
-            Source      = 'GraphObjects'
+            Id                = $id
+            DisplayName       = $displayName
+            UserPrincipalName = $userPrincipalName
+            PortalLink        = $portalLink
+            Source            = 'GraphObjects'
         }
     }
     return @($records)

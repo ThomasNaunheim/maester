@@ -45,9 +45,14 @@
         [psobject] $MaesterResults,
 
         # Controls whether user display names and object ids are replaced with stable asset ids.
-        # Never: keep the values as-is. Always / OnlyFromHtml: redact them from this html report.
-        [ValidateSet('Never', 'Always', 'OnlyFromHtml')]
-        [string] $HidePiiFromReport = 'Never'
+        # Replaces user identities (display names, user principal names and object ids) with stable asset ids.
+        # None: keep the values as-is. HtmlOnly / AllOutputs: redact them from this html report.
+        [ValidateSet('None', 'HtmlOnly', 'AllOutputs')]
+        [string] $RedactUserIdentity = 'None',
+
+        # Replacement map built by Invoke-Maester, which removes the AssetInventory it was built from.
+        [Parameter(DontShow)]
+        [hashtable] $PiiReplacementMap
     )
 
     process {
@@ -57,8 +62,17 @@
 
         Write-Verbose "Generating HTML report."
         $json = $MaesterResults | ConvertTo-Json -Depth $depth -Compress -WarningAction Ignore
-        if ($HidePiiFromReport -ne 'Never') {
-            $replacements = Get-MtReportPiiReplacementMap -MaesterResults $MaesterResults
+        if ($RedactUserIdentity -ne 'None') {
+            if ($PSBoundParameters.ContainsKey('PiiReplacementMap')) {
+                $replacements = $PiiReplacementMap
+            } else {
+                $replacements = Get-MtReportPiiReplacementMap -MaesterResults $MaesterResults
+                $hasInventory = @($MaesterResults) + @($MaesterResults.Tenants) |
+                    Where-Object { $_ -and $_.PSObject.Properties.Name -contains 'AssetInventory' }
+                if (-not $hasInventory) {
+                    Write-Warning "RedactUserIdentity: the results carry no AssetInventory, so no user identities can be redacted. Generate them with Invoke-Maester -IncludeAssetInventory."
+                }
+            }
             $json = ConvertTo-MtRedactedReportContent -Content $json -ReplacementMap $replacements -JsonEncoded
         }
 

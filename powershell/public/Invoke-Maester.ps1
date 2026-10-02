@@ -136,17 +136,17 @@
         # Adds the AssetInventory property to the results, the Assets page to the html report and,
         # with -OutputFolder, the <name>-assets.json file (plus -assets.csv with -ExportCsv).
         # Off by default because it enlarges the report; it is enabled automatically when
-        # -HidePiiFromReport is used, since redaction is driven by the inventory.
+        # -RedactUserIdentity is used, since redaction is driven by the inventory.
         [switch] $IncludeAssetInventory,
 
-        # Controls whether user display names and object ids are replaced with stable asset ids
-        # in the generated reports.
-        # Never (default): no redaction.
-        # Always: redact from every generated output (html, json, markdown, csv, Excel, assets json and csv).
-        # OnlyFromHtml: redact from the html report only, so the machine readable exports keep the
+        # Replaces user identities (display names, user principal names and object ids) with stable
+        # asset ids in the generated outputs.
+        # None (default): no redaction.
+        # AllOutputs: redact every generated output (html, json, markdown, csv, Excel, assets json and csv).
+        # HtmlOnly: redact the html report only, so the machine readable exports keep the
         # real identifiers for follow up while the shareable report does not.
-        [ValidateSet('Never', 'Always', 'OnlyFromHtml')]
-        [string] $HidePiiFromReport = 'Never',
+        [ValidateSet('None', 'HtmlOnly', 'AllOutputs')]
+        [string] $RedactUserIdentity = 'None',
 
         # The path to the file to save the test results in markdown format. The filename should include a .md extension.
         [string] $OutputMarkdownFile,
@@ -350,7 +350,7 @@
     # Redaction maps user identities onto their asset ids, so it needs the inventory even when
     # the caller did not ask for the Assets page. Collect it in that case, but only surface it
     # in the results and output files when -IncludeAssetInventory was actually requested.
-    $collectAssetInventory = $IncludeAssetInventory.IsPresent -or $HidePiiFromReport -ne 'Never'
+    $collectAssetInventory = $IncludeAssetInventory.IsPresent -or $RedactUserIdentity -ne 'None'
     $__MtSession.IncludeAssetInventory = $collectAssetInventory
 
     if (-not $DisableTelemetry) {
@@ -536,13 +536,15 @@
         }
 
         $maesterResults = ConvertTo-MtMaesterResult -PesterResults $PesterResults -OutputFiles $out -InvokeMaesterCommand $invokeMaesterCommand -PesterConfiguration $pesterConfig -SkipVersionCheck:$SkipVersionCheck -IncludeAssetInventory:$collectAssetInventory
+        # Capture is for this run's tests only; later ad-hoc Add-MtTestResultDetail calls must not collect.
+        $__MtSession.IncludeAssetInventory = $false
 
-        # 'Always' redacts every generated output, 'OnlyFromHtml' leaves the machine readable
+        # 'AllOutputs' redacts every generated output, 'HtmlOnly' leaves the machine readable
         # exports intact so findings can still be traced back to the real objects.
-        $redactNonHtml = $HidePiiFromReport -eq 'Always'
+        $redactNonHtml = $RedactUserIdentity -eq 'AllOutputs'
         $reportPiiReplacements = @{}
-        if ($HidePiiFromReport -ne 'Never') {
-            $reportPiiReplacements = Get-MtReportPiiReplacementMap -MaesterResults $maesterResults
+        if ($RedactUserIdentity -ne 'None') {
+            $reportPiiReplacements = Get-MtReportPiiReplacementMap -MaesterResults $maesterResults -IncludeSessionCache
         }
 
         # Drop the inventory again when it was only collected to drive redaction, so the reports
@@ -570,7 +572,7 @@
 
         if (![string]::IsNullOrEmpty($out.OutputAssetsJsonFile) -and $maesterResults.AssetInventory) {
             Write-MtProgress -Activity 'Creating asset inventory'
-            $output = $maesterResults.AssetInventory | ConvertTo-Json -Depth 5 -WarningAction SilentlyContinue
+            $output = ConvertTo-Json -InputObject @($maesterResults.AssetInventory) -Depth 5 -WarningAction SilentlyContinue
             if ($redactNonHtml) {
                 $output = ConvertTo-MtRedactedReportContent -Content $output -ReplacementMap $reportPiiReplacements -JsonEncoded
             }
@@ -578,7 +580,7 @@
         }
 
         if (![string]::IsNullOrEmpty($out.OutputAssetsCsvFile) -and $maesterResults.AssetInventory) {
-            $output = $maesterResults.AssetInventory | Select-Object System, AnchorKind, Type, Id, UniqueId, DisplayName, PortalLink,
+            $output = $maesterResults.AssetInventory | Select-Object System, AnchorKind, Type, Id, UniqueId, DisplayName, UserPrincipalName, PortalLink,
             @{ Name = 'Tests'; Expression = { $_.Tests -join '; ' } },
             @{ Name = 'Sources'; Expression = { $_.Sources -join '; ' } } |
                 ConvertTo-Csv -NoTypeInformation
@@ -618,7 +620,7 @@
 
         if (![string]::IsNullOrEmpty($out.OutputHtmlFile)) {
             Write-MtProgress -Activity 'Creating html report'
-            $output = Get-MtHtmlReport -MaesterResults $maesterResults -HidePiiFromReport $HidePiiFromReport
+            $output = Get-MtHtmlReport -MaesterResults $maesterResults -RedactUserIdentity $RedactUserIdentity -PiiReplacementMap $reportPiiReplacements
             $output | Out-File -FilePath $out.OutputHtmlFile -Encoding UTF8
             if (-not $NonInteractive.IsPresent) {
                 Write-Host "🔥 Maester test report generated at $($out.OutputHtmlFile)" -ForegroundColor Green

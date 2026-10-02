@@ -48,8 +48,9 @@
 
     if ($__MtSession.GraphCache) {
         foreach ($key in $__MtSession.GraphCache.Keys) {
-            # POST cache keys append "_<body>"; hunting queries and batches carry no resource path identity
-            $uri = ($key -split '_', 2)[0]
+            # POST cache keys append "_<json body>" (or a bare "_" when the body is empty). A plain
+            # underscore is part of the path: guest UPNs look like john_contoso.com#EXT#@tenant.
+            $uri = ($key -split '_(?=[\{\[]|$)', 2)[0]
             if ($uri -notmatch '^https://[^/]*graph[^/]*/(v1\.0|beta)/(.+)$') { continue }
             $path = $Matches[2]
             # Strip query string
@@ -63,17 +64,23 @@
             # follows: users/{id}/authentication/methods is still that user, not a fifth asset.
             # The key may be a GUID or a UPN, and a UPN must be recognised or it lands in Type,
             # where the report's PII redaction never reaches it.
-            if ($segments.Count -ge 2 -and $directoryTypes.ContainsKey($segments[0]) -and
-                ($segments[1] -match $guidPattern -or $segments[1].Contains('@'))) {
+            if ($segments.Count -ge 2 -and $directoryTypes.ContainsKey($segments[0])) {
+                # Cache keys are AbsoluteUri values, so a UPN arrives percent-encoded (#EXT# as %23EXT%23).
+                $directoryKey = [uri]::UnescapeDataString($segments[1])
+            } else {
+                $directoryKey = $null
+            }
+            if ($directoryKey -and ($directoryKey -match $guidPattern -or $directoryKey.Contains('@'))) {
                 $records.Add([PSCustomObject]@{
-                        System      = 'EntraID'
-                        AnchorKind  = 'Instance'
-                        Type        = $directoryTypes[$segments[0]]
-                        Id          = $segments[1]
-                        DisplayName = $null
-                        PortalLink  = $null
-                        SourceUri   = $uri
-                        Source      = 'GraphCache'
+                        System            = 'EntraID'
+                        AnchorKind        = 'Instance'
+                        Type              = $directoryTypes[$segments[0]]
+                        Id                = $directoryKey
+                        DisplayName       = $null
+                        UserPrincipalName = if ($segments[0] -eq 'users' -and $directoryKey.Contains('@')) { $directoryKey }
+                        PortalLink        = $null
+                        SourceUri         = $uri
+                        Source            = 'GraphCache'
                     })
                 continue
             }

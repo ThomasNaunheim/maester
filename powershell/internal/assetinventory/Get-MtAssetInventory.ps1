@@ -40,14 +40,15 @@ function Get-MtAssetInventory {
             foreach ($related in @(Get-ObjectProperty $detail 'RelatedObjects')) {
                 if ($null -eq $related) { continue }
                 $records.Add([PSCustomObject]@{
-                        System      = $related.System
-                        AnchorKind  = $related.AnchorKind
-                        Type        = $related.Type
-                        Id          = $related.Id
-                        DisplayName = $related.DisplayName
-                        PortalLink  = $related.PortalLink
-                        TestId      = $test.Id
-                        Source      = $related.Source
+                        System            = $related.System
+                        AnchorKind        = $related.AnchorKind
+                        Type              = $related.Type
+                        Id                = $related.Id
+                        DisplayName       = $related.DisplayName
+                        UserPrincipalName = Get-ObjectProperty $related 'UserPrincipalName'
+                        PortalLink        = $related.PortalLink
+                        TestId            = $test.Id
+                        Source            = $related.Source
                     })
             }
 
@@ -79,15 +80,16 @@ function Get-MtAssetInventory {
         } | Select-Object -First 1
         $uniqueId = Get-MtAssetUniqueId -System $best.System -Type $best.Type -Id $best.Id
         [PSCustomObject]@{
-            System      = $best.System
-            AnchorKind  = $best.AnchorKind
-            Type        = $best.Type
-            Id          = $best.Id
-            UniqueId    = $uniqueId
-            DisplayName = ($_.Group.DisplayName | Where-Object { $_ } | Select-Object -First 1)
-            PortalLink  = ($_.Group.PortalLink | Where-Object { $_ } | Select-Object -First 1)
-            Tests       = @($_.Group.TestId | Where-Object { $_ } | Select-Object -Unique)
-            Sources     = @($_.Group.Source | Select-Object -Unique)
+            System            = $best.System
+            AnchorKind        = $best.AnchorKind
+            Type              = $best.Type
+            Id                = $best.Id
+            UniqueId          = $uniqueId
+            DisplayName       = ($_.Group.DisplayName | Where-Object { $_ } | Select-Object -First 1)
+            UserPrincipalName = ($_.Group | ForEach-Object { Get-ObjectProperty $_ 'UserPrincipalName' } | Where-Object { $_ } | Select-Object -First 1)
+            PortalLink        = ($_.Group.PortalLink | Where-Object { $_ } | Select-Object -First 1)
+            Tests             = @($_.Group.TestId | Where-Object { $_ } | Select-Object -Unique)
+            Sources           = @($_.Group.Source | Select-Object -Unique)
         }
     }
 

@@ -14,7 +14,7 @@ sets `$__MtSession.IncludeAssetInventory`, which gates the per-test `RelatedObje
 and the `AssetInventory` property. A report generated without it carries none of this data and
 the report's sidebar does not offer the Assets page.
 
-`-HidePiiFromReport` needs the inventory to know which values belong to which user, so it
+`-RedactUserIdentity` needs the inventory to know which values belong to which user, so it
 collects one even when `-IncludeAssetInventory` was not passed. In that case `Invoke-Maester`
 removes the `AssetInventory` property again once the replacement map has been built, so the
 report does not grow and the Assets page does not appear unasked.
@@ -35,6 +35,7 @@ Every source normalizes into the same record shape so results can be merged and 
 | `Type` | Canonical object type (`ConditionalAccessPolicy`, `User`, `Group`, `ServicePrincipal`, Graph resource path, ...) |
 | `Id` | Object id (GUID), resource key (`Fido2`), or external identity (`org/repo`); `$null` for singletons/collections |
 | `DisplayName` | Human-readable name when the source provides one |
+| `UserPrincipalName` | UPN of a user asset when the source provides one; used by PII redaction |
 | `PortalLink` | Admin-portal deep link when a template exists for the type |
 | `Tests` | Test ids (`MT.xxxx`, ...) that referenced the asset (aggregated) |
 | `Sources` | Which of the three detection sources found it (aggregated) |
@@ -69,9 +70,11 @@ When a test calls `Add-MtTestResultDetail -GraphObjects ...`, the objects are co
    (`ConditionalAccess` → `ConditionalAccessPolicy`, `Users`/`UserRole` → `User`,
    `Groups` → `Group`, `Devices` → `Device`) so records dedupe against source 2.
 2. `@odata.type` sniffing per object (`#microsoft.graph.user` → `User`, etc.), using the
-   shared mapping in `Get-MtPortalLinkTemplate`.
-3. Unknown types are still captured (never silently dropped): the raw `@odata.type` becomes
-   the `Type`, and the record is an `Instance` if the object has an id.
+   shared mapping in `Get-MtPortalLinkTemplate`, plus asset-only mappings for
+   `servicePrincipal`, `directoryRole` and `conditionalAccessPolicy`.
+3. Other types are still captured: the raw `@odata.type` becomes the `Type`, and the record
+   is an `Instance` if the object has an id. Unless the type is added to the catalog, the
+   type filter then drops it with a warning (see below).
 
 Portal deep links come from the same shared template table (`Get-MtPortalLinkTemplate`),
 which is environment-aware via `$__MtSession.AdminPortalUrl` (Global/USGov/China clouds).
@@ -208,10 +211,15 @@ up as an explicit maintenance item instead of silently reaching the report. Add 
 ## Redacting user identities
 
 `Get-MtReportPiiReplacementMap` turns the inventory's `User` assets into a map of
-display name / object id → `UniqueId`, and `ConvertTo-MtRedactedReportContent` applies that map to rendered
+display name / UPN / object id → `UniqueId`. `Invoke-Maester` also passes `-IncludeSessionCache`,
+which adds the UPN and object id (not the display name) of every user object in the cached Graph
+responses, including users only read as part of a list, such as the member users MT.1033 names in
+its test titles. The signed-in account (`Account`, `MgContext.Account`) is always mapped, since
+every report carries it. `ConvertTo-MtRedactedReportContent` applies that map to rendered
 report content, matching on word boundaries so a short display name cannot rewrite the middle
-of an unrelated word (a service account named `Test` must not turn `TestResult` into a token —
-that renames json properties and leaves the report unparseable). `Get-MtAssetUniqueId` is the
+of an unrelated word (a service account named `Test` must not turn `TestResult` into a token).
+With `-JsonEncoded` only json string values are rewritten, never property names, so a user
+named like a property (`Severity`) cannot leave the report unparseable. `Get-MtAssetUniqueId` is the
 single place the id is derived, so the html report, the json/markdown exports and the assets
 files all use the same token. It lower-cases the `System|Type|Id` identity before hashing,
 because the grouping that feeds it is case-insensitive while URL casing is not stable across
@@ -226,8 +234,8 @@ and (on Windows PowerShell) non-ASCII characters, so the raw display name alone 
 the serialized text. Display names shorter than four characters are skipped because a
 substring replacement of them would corrupt unrelated words.
 
-`Invoke-Maester -HidePiiFromReport` selects the scope: `Never`, `Always` (every output) or
-`OnlyFromHtml` (html only).
+`Invoke-Maester -RedactUserIdentity` selects the scope: `None`, `HtmlOnly` (html report only) or
+`AllOutputs` (every output).
 
 ## Offline validation
 

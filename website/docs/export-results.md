@@ -53,7 +53,7 @@ Convert-MtResultsToFlatObject -InputObject $results -PassThru
 
 ## Asset inventory
 
-Every test run produces an **asset inventory**: the consolidated list of objects that the run
+Maester can collect an **asset inventory**: the consolidated list of objects that the run
 touched — Entra ID objects such as conditional access policies, users, groups and service
 principals, tenant-level configuration surfaces, the Microsoft Graph resources that were read,
 and external systems such as GitHub.
@@ -81,30 +81,34 @@ same id across runs and can be correlated between reports.
 ## Hiding user identities from reports
 
 Reports that are shared beyond the security team often should not name individual users. Use
-`-HidePiiFromReport` to replace user display names and user object ids with the user's
+`-RedactUserIdentity` to replace user display names, user principal names and user object ids with the user's
 `UniqueId` from the asset inventory:
 
 | Value | Effect |
 | --- | --- |
-| `Never` (default) | No redaction. |
-| `Always` | Redact from every generated output: html, json, markdown, markdown summary, csv, Excel and the asset json/csv. |
-| `OnlyFromHtml` | Redact from the html report only, so the machine readable exports keep the real identifiers for follow-up. |
+| `None` (default) | No redaction. |
+| `HtmlOnly` | Redact the html report only, so the machine readable exports keep the real identifiers for follow-up. |
+| `AllOutputs` | Redact every generated output: html, json, markdown, markdown summary, csv, Excel and the asset json/csv. |
+
+Use `AllOutputs` when any file besides the html report leaves the security team, for example as a
+pipeline artifact or mail attachment.
 
 ```powershell
-Invoke-Maester -OutputFolder "C:\path\to\results" -HidePiiFromReport OnlyFromHtml
+Invoke-Maester -OutputFolder "C:\path\to\results" -RedactUserIdentity AllOutputs
 ```
 
-Redaction is driven by the asset inventory, so `-HidePiiFromReport` collects one automatically.
+Redaction is driven by the asset inventory, so `-RedactUserIdentity` collects one automatically.
 It stays internal to the redaction step unless you also pass `-IncludeAssetInventory`.
 
 The same parameter is available on `Get-MtHtmlReport` when you generate the html report yourself.
 
 :::caution
 
-Redaction is best effort. Only users that Maester captured in the asset inventory can be
-replaced, so free-text that names a person without the run referencing that object is not
-detected. A user identifier that Maester captured under another asset type is not replaced
-either, because the map is built from `User` assets only.
+Redaction is best effort. Maester replaces the users in the asset inventory, the account that
+ran Maester, plus the user
+principal names and object ids of every user it read from Microsoft Graph during the run (for
+example the users named in data-driven test titles). Free text that names a person the run never
+read is not detected, and display names are only replaced for users in the asset inventory.
 
 The replacement token is derived from the object's identity with an unsalted hash, so it is
 pseudonymization rather than anonymization: anyone holding a list of candidate object ids or

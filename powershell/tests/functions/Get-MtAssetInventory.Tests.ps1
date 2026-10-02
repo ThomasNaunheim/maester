@@ -52,6 +52,40 @@ Describe 'Asset inventory' {
             $asset | Should -Not -BeNullOrEmpty
             $asset.Type | Should -Be '#microsoft.graph.someNewThing'
         }
+
+        It 'Should keep the user principal name on user records' {
+            $asset = InModuleScope Maester {
+                ConvertTo-MtAssetRecord -GraphObjectType Users -GraphObjects ([PSCustomObject]@{
+                        id                = '11111111-1111-1111-1111-111111111111'
+                        displayName       = 'Jane Doe'
+                        userPrincipalName = 'jane@contoso.com'
+                    })
+            }
+
+            $asset.DisplayName | Should -Be 'Jane Doe'
+            $asset.UserPrincipalName | Should -Be 'jane@contoso.com'
+        }
+
+        It 'Should map <OdataType> to the catalog type <Expected>' -ForEach @(
+            @{ OdataType = '#microsoft.graph.servicePrincipal'; Expected = 'ServicePrincipal' }
+            @{ OdataType = '#microsoft.graph.directoryRole'; Expected = 'DirectoryRole' }
+            @{ OdataType = '#microsoft.graph.conditionalAccessPolicy'; Expected = 'ConditionalAccessPolicy' }
+        ) {
+            $result = InModuleScope Maester -Parameters @{ OdataType = $OdataType } {
+                param($OdataType)
+                $record = ConvertTo-MtAssetRecord -GraphObjects ([PSCustomObject]@{
+                        '@odata.type' = $OdataType
+                        id            = '33333333-3333-3333-3333-333333333333'
+                    })
+                $kept = Select-MtAssetByType -Assets @($record) -WarningVariable warnings -WarningAction SilentlyContinue
+                [PSCustomObject]@{ Record = $record; Kept = @($kept).Count; Warnings = @($warnings).Count }
+            }
+
+            $result.Record.Type | Should -Be $Expected
+            $result.Record.AnchorKind | Should -Be 'Instance'
+            $result.Kept | Should -Be 1
+            $result.Warnings | Should -Be 0
+        }
     }
 
     Context 'Get-MtAssetInventoryFromMarkdown' {
@@ -175,6 +209,40 @@ Describe 'Asset inventory' {
             $asset.Type | Should -Be 'User'
             $asset.Id | Should -Be 'alice@contoso.com'
             $asset.AnchorKind | Should -Be 'Instance'
+        }
+
+        It 'Should keep a guest UPN whole and decode it' {
+            $asset = InModuleScope Maester {
+                $__MtSession.GraphCache = @{
+                    'https://graph.microsoft.com/v1.0/users/john_contoso.com%23EXT%23@tenant.onmicrosoft.com' = 'x'
+                }
+                try {
+                    Get-MtAssetInventoryFromCache
+                } finally {
+                    $__MtSession.GraphCache = @{}
+                }
+            }
+
+            $asset.System | Should -Be 'EntraID'
+            $asset.Type | Should -Be 'User'
+            $asset.Id | Should -Be 'john_contoso.com#EXT#@tenant.onmicrosoft.com'
+            $asset.UserPrincipalName | Should -Be 'john_contoso.com#EXT#@tenant.onmicrosoft.com'
+        }
+
+        It 'Should strip an empty POST body suffix from the cache key' {
+            $asset = InModuleScope Maester {
+                $__MtSession.GraphCache = @{
+                    'https://graph.microsoft.com/beta/policies/authorizationPolicy_' = 'x'
+                }
+                try {
+                    Get-MtAssetInventoryFromCache
+                } finally {
+                    $__MtSession.GraphCache = @{}
+                }
+            }
+
+            $asset.Type | Should -Be 'policies/authorizationPolicy'
+            $asset.AnchorKind | Should -Be 'Singleton'
         }
 
         It 'Should leave collections that are not keyed directory reads alone' {
@@ -470,6 +538,192 @@ Describe 'Asset inventory' {
             $map['33333333-3333-3333-3333-333333333333'] | Should -Be 'asset-user-002'
         }
 
+        Context 'Session cache' {
+            BeforeAll {
+                # Shapes taken from a live run: Get-MtUser caches a list read as a Hashtable,
+                # checks such as Test-MtCaReferencedObjectsExist cache keyed reads with a display name.
+                $script:sessionCache = @{
+                    'https://graph.microsoft.com/beta/users?$select=id%2CuserPrincipalName%2CuserType&$top=5&$filter=userType+eq+%27Member%27' = @{
+                        '@odata.context' = 'https://graph.microsoft.com/beta/$metadata#users(id,userPrincipalName,userType)'
+                        value            = @(
+                            @{ id = '77777777-7777-7777-7777-777777777777'; userPrincipalName = 'sam.member@contoso.com'; userType = 'Member' }
+                            @{ id = '88888888-8888-8888-8888-888888888888'; userPrincipalName = 'kim.member@contoso.com'; userType = 'Member' }
+                        )
+                    }
+                    'https://graph.microsoft.com/beta/users/99999999-9999-9999-9999-999999999999' = [PSCustomObject]@{
+                        id = '99999999-9999-9999-9999-999999999999'; userPrincipalName = 'lee@contoso.com'; displayName = 'Support'
+                    }
+                    'https://graph.microsoft.com/beta/groups?$select=id' = @{ value = @(@{ id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; displayName = 'Sales' }) }
+                    'https://graph.microsoft.com/v1.0/$batch_{"requests":[]}' = $null
+                    'https://graph.microsoft.com/v1.0/organization' = 'not an object'
+                    'https://graph.microsoft.com/v1.0/security/runHuntingQuery_{"Query":"x"}' = @(1, 2)
+                }
+
+                $script:mapWithCache = {
+                    param([switch] $IncludeSessionCache)
+                    InModuleScope Maester -Parameters @{ Cache = $script:sessionCache; Include = $IncludeSessionCache.IsPresent } {
+                        param($Cache, $Include)
+                        $previous = $__MtSession.GraphCache
+                        $__MtSession.GraphCache = $Cache
+                        try {
+                            Get-MtReportPiiReplacementMap -MaesterResults ([PSCustomObject]@{ Tests = @() }) -IncludeSessionCache:$Include
+                        } finally {
+                            $__MtSession.GraphCache = $previous
+                        }
+                    }
+                }
+            }
+
+            It 'Should map users that were only read as part of a list' {
+                $map = & $script:mapWithCache -IncludeSessionCache
+
+                $map['sam.member@contoso.com'] | Should -BeLike 'asset-*'
+                $map['kim.member@contoso.com'] | Should -BeLike 'asset-*'
+                $map['77777777-7777-7777-7777-777777777777'] | Should -Be $map['sam.member@contoso.com']
+            }
+
+            It 'Should map users from keyed reads without their display name' {
+                $map = & $script:mapWithCache -IncludeSessionCache
+
+                $map['lee@contoso.com'] | Should -BeLike 'asset-*'
+                $map.ContainsKey('Support') | Should -BeFalse
+                # Non-user objects carry no UPN
+                $map.ContainsKey('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') | Should -BeFalse
+            }
+
+            It 'Should use the same token as the inventory record of the same user' {
+                $tokens = InModuleScope Maester -Parameters @{ Cache = $script:sessionCache } {
+                    param($Cache)
+                    $previous = $__MtSession.GraphCache
+                    $__MtSession.GraphCache = $Cache
+                    try {
+                        $inventory = @(Get-MtAssetInventory -MaesterResults ([PSCustomObject]@{ Tests = @() }))
+                        $map = Get-MtReportPiiReplacementMap -MaesterResults ([PSCustomObject]@{ AssetInventory = $inventory }) -IncludeSessionCache
+                        [PSCustomObject]@{
+                            Inventory = ($inventory | Where-Object Id -EQ '99999999-9999-9999-9999-999999999999').UniqueId
+                            Map       = $map['lee@contoso.com']
+                        }
+                    } finally {
+                        $__MtSession.GraphCache = $previous
+                    }
+                }
+
+                $tokens.Inventory | Should -Not -BeNullOrEmpty
+                $tokens.Map | Should -Be $tokens.Inventory
+            }
+
+            It 'Should ignore the session cache unless asked to' {
+                $map = & $script:mapWithCache
+
+                $map.Count | Should -Be 0
+            }
+
+            It 'Should redact a list-read UPN from a test title in the json' {
+                $map = & $script:mapWithCache -IncludeSessionCache
+                $json = [PSCustomObject]@{
+                    Title = 'User should be blocked from using legacy authentication (sam.member@contoso.com)'
+                } | ConvertTo-Json -Compress
+
+                $redacted = InModuleScope Maester -Parameters @{ Json = $json; Map = $map } {
+                    param($Json, $Map)
+                    ConvertTo-MtRedactedReportContent -Content $Json -ReplacementMap $Map -JsonEncoded
+                }
+
+                $redacted | Should -Not -BeLike '*sam.member@contoso.com*'
+                ($redacted | ConvertFrom-Json).Title | Should -BeLike 'User should be blocked from using legacy authentication (asset-*)'
+            }
+        }
+
+        Context 'Signed-in account' {
+            It 'Should map the signed-in account even when the run never read it from Graph' {
+                $map = InModuleScope Maester {
+                    Get-MtReportPiiReplacementMap -MaesterResults ([PSCustomObject]@{
+                            Account   = 'ops.admin@contoso.com'
+                            MgContext = [PSCustomObject]@{ Account = 'ops.admin@contoso.com' }
+                        })
+                }
+
+                $map['ops.admin@contoso.com'] | Should -BeLike 'asset-*'
+                $map.Count | Should -Be 1
+            }
+
+            It 'Should reuse the object id token when the account was read from Graph' {
+                $tokens = InModuleScope Maester -Parameters @{ Cache = $script:sessionCache } {
+                    param($Cache)
+                    $previous = $__MtSession.GraphCache
+                    $__MtSession.GraphCache = $Cache
+                    try {
+                        $map = Get-MtReportPiiReplacementMap -IncludeSessionCache -MaesterResults ([PSCustomObject]@{ Account = 'sam.member@contoso.com' })
+                        [PSCustomObject]@{
+                            Account = $map['sam.member@contoso.com']
+                            Id      = $map['77777777-7777-7777-7777-777777777777']
+                        }
+                    } finally {
+                        $__MtSession.GraphCache = $previous
+                    }
+                }
+
+                $tokens.Account | Should -Be $tokens.Id
+            }
+
+            It 'Should not map <Case>' -ForEach @(
+                @{ Case = 'the placeholder of an unconnected run'; Account = 'Account (not connected to Graph)' }
+                @{ Case = 'an app-only run without account'; Account = $null }
+            ) {
+                $map = InModuleScope Maester -Parameters @{ Account = $Account } {
+                    param($Account)
+                    Get-MtReportPiiReplacementMap -MaesterResults ([PSCustomObject]@{ Account = $Account; MgContext = $null })
+                }
+
+                $map.Count | Should -Be 0
+            }
+
+            It 'Should map the account of every tenant in a merged result' {
+                $map = InModuleScope Maester {
+                    Get-MtReportPiiReplacementMap -MaesterResults ([PSCustomObject]@{
+                            Tenants = @(
+                                [PSCustomObject]@{ Account = 'admin@contoso.com' }
+                                [PSCustomObject]@{ Account = 'admin@fabrikam.com' }
+                            )
+                        })
+                }
+
+                $map.Keys | Should -Contain 'admin@contoso.com'
+                $map.Keys | Should -Contain 'admin@fabrikam.com'
+            }
+        }
+
+        It 'Should map the user principal name of a user asset' {
+            $map = InModuleScope Maester {
+                Get-MtReportPiiReplacementMap -MaesterResults ([PSCustomObject]@{
+                        AssetInventory = @(
+                            [PSCustomObject]@{
+                                System = 'EntraID'; Type = 'User'; UniqueId = 'asset-user-003'
+                                Id = '44444444-4444-4444-4444-444444444444'; DisplayName = 'Jane Doe'
+                                UserPrincipalName = 'jane@contoso.com'
+                            }
+                        )
+                    })
+            }
+
+            $map['jane@contoso.com'] | Should -Be 'asset-user-003'
+        }
+
+        It 'Should carry the user principal name from related objects into the inventory' {
+            $inventory = InModuleScope Maester {
+                $record = ConvertTo-MtAssetRecord -GraphObjectType Users -GraphObjects ([PSCustomObject]@{
+                        id = '55555555-5555-5555-5555-555555555555'; displayName = 'Jane Doe'; userPrincipalName = 'jane@contoso.com'
+                    })
+                Get-MtAssetInventory -ExcludeSessionCache -MaesterResults ([PSCustomObject]@{
+                        Tests = @([PSCustomObject]@{
+                                Id = 'MT.1001'; ResultDetail = [PSCustomObject]@{ RelatedObjects = @($record); TestResult = '' }
+                            })
+                    })
+            }
+
+            $inventory.UserPrincipalName | Should -Be 'jane@contoso.com'
+        }
+
         It 'Should collect user assets from every tenant of a merged result' {
             $map = InModuleScope Maester -Parameters @{ Results = $script:results } {
                 param($Results)
@@ -516,6 +770,38 @@ Describe 'Asset inventory' {
 
             $redacted | Should -Be '{"Title":"Testing scope","TestResult":"Latest TestResults show asset-user-001 only"}'
             { $redacted | ConvertFrom-Json } | Should -Not -Throw
+        }
+
+        It 'Should never rename a json property that equals a display name' {
+            $redacted = InModuleScope Maester {
+                $content = [PSCustomObject]@{ Severity = 'High'; Title = 'Severity of Severity' } | ConvertTo-Json -Compress
+                ConvertTo-MtRedactedReportContent -Content $content -ReplacementMap @{ 'Severity' = 'asset-user-001' } -JsonEncoded
+            }
+
+            $redacted | Should -Be '{"Severity":"High","Title":"asset-user-001 of asset-user-001"}'
+            ($redacted | ConvertFrom-Json).Severity | Should -Be 'High'
+        }
+
+        It 'Should redact json values that contain escaped quotes around a property-like text' {
+            $redacted = InModuleScope Maester {
+                $content = [PSCustomObject]@{ Note = 'say "Jane Doe": hi'; Owner = 'Jane Doe' } | ConvertTo-Json -Compress
+                ConvertTo-MtRedactedReportContent -Content $content -ReplacementMap @{ 'Jane Doe' = 'asset-user-001' } -JsonEncoded
+            }
+
+            $parsed = $redacted | ConvertFrom-Json
+            $parsed.Note | Should -Be 'say "asset-user-001": hi'
+            $parsed.Owner | Should -Be 'asset-user-001'
+        }
+
+        It 'Should prefer the longest matching value' {
+            $redacted = InModuleScope Maester {
+                ConvertTo-MtRedactedReportContent -Content 'Jane Doe Admin and Jane Doe' -ReplacementMap @{
+                    'Jane Doe'       = 'asset-a'
+                    'Jane Doe Admin' = 'asset-b'
+                }
+            }
+
+            $redacted | Should -Be 'asset-b and asset-a'
         }
     }
 }

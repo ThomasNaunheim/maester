@@ -143,8 +143,8 @@
             $html | Should -BeLike '*BreakGlass1@contoso.com*'
         }
 
-        It 'Should keep user PII when HidePiiFromReport is Never' {
-            $html = Get-MtHtmlReport -MaesterResults $singleTenant -HidePiiFromReport Never
+        It 'Should keep user PII when RedactUserIdentity is None' {
+            $html = Get-MtHtmlReport -MaesterResults $singleTenant -RedactUserIdentity None
 
             $html | Should -BeLike '*user@contoso.com*'
         }
@@ -155,17 +155,41 @@
             $html | Should -BeLike '*user@contoso.com*'
         }
 
-        It 'Should replace user PII with the asset unique ID for <_>' -ForEach @('Always', 'OnlyFromHtml') {
-            $html = Get-MtHtmlReport -MaesterResults $singleTenant -HidePiiFromReport $_
+        It 'Should replace user PII with the asset unique ID for <_>' -ForEach @('AllOutputs', 'HtmlOnly') {
+            $html = Get-MtHtmlReport -MaesterResults $singleTenant -RedactUserIdentity $_
 
             $html | Should -BeLike '*asset-user-001*'
             $html | Should -Not -BeLike '*user@contoso.com*'
             $html | Should -Not -BeLike '*11111111-1111-1111-1111-111111111111*'
         }
 
-        It 'Should reject an unknown HidePiiFromReport value' {
-            { Get-MtHtmlReport -MaesterResults $singleTenant -HidePiiFromReport 'Sometimes' } |
+        It 'Should redact the signed-in account for <_>' -ForEach @('AllOutputs', 'HtmlOnly') {
+            $html = Get-MtHtmlReport -MaesterResults $singleTenant -RedactUserIdentity $_
+
+            $html | Should -Not -BeLike '*test@contoso.com*'
+        }
+
+        It 'Should reject an unknown RedactUserIdentity value' {
+            { Get-MtHtmlReport -MaesterResults $singleTenant -RedactUserIdentity 'Always' } |
                 Should -Throw
+        }
+
+        It 'Should redact with a supplied replacement map when the results carry no inventory' {
+            $withoutInventory = $singleTenant | Select-Object -Property * -ExcludeProperty AssetInventory
+            $map = @{ 'user@contoso.com' = 'asset-user-001'; '11111111-1111-1111-1111-111111111111' = 'asset-user-001' }
+
+            $html = Get-MtHtmlReport -MaesterResults $withoutInventory -RedactUserIdentity HtmlOnly -PiiReplacementMap $map
+
+            $html | Should -BeLike '*asset-user-001*'
+            $html | Should -Not -BeLike '*user@contoso.com*'
+        }
+
+        It 'Should warn when redaction is requested but the results carry no inventory' {
+            $withoutInventory = $singleTenant | Select-Object -Property * -ExcludeProperty AssetInventory
+
+            $null = Get-MtHtmlReport -MaesterResults $withoutInventory -RedactUserIdentity AllOutputs -WarningVariable warnings -WarningAction SilentlyContinue
+
+            ($warnings -join ' ') | Should -BeLike '*no AssetInventory*'
         }
 
         It 'Should not contain sample data from the template' {

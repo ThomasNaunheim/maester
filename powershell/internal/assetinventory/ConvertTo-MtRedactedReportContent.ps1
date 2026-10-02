@@ -12,7 +12,9 @@ function ConvertTo-MtRedactedReportContent {
     When the content is json, the raw value alone is not enough: ConvertTo-Json escapes quotes,
     backslashes and (on Windows PowerShell) non-ASCII characters, so a display name such as
     Jorg "JD" Muller would never match the serialized text. Use -JsonEncoded to also replace the
-    serialized form of every value.
+    serialized form of every value. In that mode only json string values are rewritten, never
+    property names, so a user whose display name equals a property ("Severity") cannot break
+    the document.
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -33,35 +35,44 @@ function ConvertTo-MtRedactedReportContent {
     )
 
     begin {
-        # Substring replacement would rewrite the middle of unrelated words: a service account
-        # named "Test" turns "TestResult" into a redaction token, which also renames json
-        # properties and leaves the report unparseable.
-        function ReplaceOnWordBoundary($Text, $Value, $Replacement) {
-            if ([string]::IsNullOrEmpty($Value)) { return $Text }
-            $pattern = "(?<![\w-])$([regex]::Escape($Value))(?![\w-])"
-            return [regex]::Replace($Text, $pattern, $Replacement.Replace('$', '$$$$'))
+        $lookup = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::Ordinal)
+        foreach ($key in $ReplacementMap.Keys) {
+            $value = [string]$key
+            if ([string]::IsNullOrEmpty($value)) { continue }
+            $replacement = [string]$ReplacementMap[$key]
+            $lookup[$value] = $replacement
+            if ($JsonEncoded) {
+                $serialized = [string](ConvertTo-Json -InputObject $value -Compress)
+                $lookup[$serialized.Substring(1, $serialized.Length - 2)] = $replacement
+            }
+        }
+
+        $valuePattern = $null
+        if ($lookup.Count -gt 0) {
+            # Longest first so a display name that contains another value is replaced whole.
+            $alternation = ($lookup.Keys | Sort-Object -Property Length -Descending | ForEach-Object { [regex]::Escape($_) }) -join '|'
+            # Word boundaries: a service account named "Test" must not rewrite "TestResult".
+            $valuePattern = [regex]::new("(?<![\w-])(?:$alternation)(?![\w-])")
+        }
+        $replaceValue = [System.Text.RegularExpressions.MatchEvaluator] { param($match) $lookup[$match.Value] }
+
+        # A json string token, plus the colon that follows it when the token is a property name.
+        $jsonStringPattern = [regex]::new('"[^"\\]*(?:\\.[^"\\]*)*"(?<key>\s*:)?')
+        $replaceJsonString = [System.Text.RegularExpressions.MatchEvaluator] {
+            param($match)
+            if ($match.Groups['key'].Success) { return $match.Value }
+            $valuePattern.Replace($match.Value, $replaceValue)
         }
     }
 
     process {
-        if ([string]::IsNullOrEmpty($Content) -or $ReplacementMap.Count -eq 0) {
+        if ([string]::IsNullOrEmpty($Content) -or $null -eq $valuePattern) {
             return $Content
         }
 
-        $result = $Content
-        foreach ($key in @($ReplacementMap.Keys | Sort-Object -Property Length -Descending)) {
-            $replacement = [string]$ReplacementMap[$key]
-            $result = ReplaceOnWordBoundary -Text $result -Value ([string]$key) -Replacement $replacement
-
-            if ($JsonEncoded) {
-                # Trim the quotes ConvertTo-Json wraps around the string to get the escaped value.
-                $encoded = ([string]($key | ConvertTo-Json -Compress)).Trim('"')
-                if ($encoded -ne $key) {
-                    $result = ReplaceOnWordBoundary -Text $result -Value $encoded -Replacement $replacement
-                }
-            }
+        if ($JsonEncoded) {
+            return $jsonStringPattern.Replace($Content, $replaceJsonString)
         }
-
-        return $result
+        return $valuePattern.Replace($Content, $replaceValue)
     }
 }
