@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { ExternalLink, Search } from "lucide-react"
-import { Link } from "react-router"
+import { Link } from "@/lib/router"
 import { useTenant } from "@/context/TenantContext"
 
 interface AssetRecord {

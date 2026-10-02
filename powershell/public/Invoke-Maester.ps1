@@ -188,7 +188,14 @@
         # No email will be sent if this parameter is not provided.
         [string[]] $MailRecipient,
 
-        # If sending the report to an email recipient, provide a Uri to the detailed test results page.
+        # If sending the report to an email recipient, provide an absolute HTTP or HTTPS Uri to the detailed test results page.
+        [ValidateScript({
+                $uri = $null
+                if ($_ -and -not ([Uri]::TryCreate($_, [UriKind]::Absolute, [ref]$uri) -and $uri.Scheme -in @('http', 'https'))) {
+                    throw 'MailTestResultsUri must be an absolute HTTP or HTTPS URI, e.g. https://contoso.com/maester/report.html'
+                }
+                return $true
+            })]
         [string] $MailTestResultsUri,
 
         # The user id of the sender of the mail. Defaults to the current user.
@@ -363,12 +370,30 @@
 
     $isWebUri = -not ([String]::IsNullOrEmpty($TeamChannelWebhookUri))
 
+    # Exclude Preview by default when neither Tag nor IncludePreview is specified.
+    if (-not $Tag -and -not $IncludePreview.IsPresent) {
+        $ExcludeTag += 'Preview'
+        Write-Verbose 'Excluding Preview tests. Use -IncludePreview to include them.'
+    }
+
+    # Include Preview when the deprecated All tag is specified.
+    if ('All' -in $Tag) {
+        Write-Verbose (
+            'Including preview tests. Please use -IncludePreview instead of the ' +
+            'deprecated ''All'' tag.'
+        )
+        $ExcludeTag = $ExcludeTag | Where-Object { $_ -ne 'Preview' }
+    }
+
+    $EffectiveIncludePreview = 'Preview' -notin @($ExcludeTag)
+
     if ($SkipGraphConnect) {
         if (-not $NonInteractive.IsPresent) {
             Write-Host '🔥 Skipping graph connection check' -ForegroundColor Yellow
         }
     } else {
-        Test-MtContext -SendMail:$isMail -SendTeamsMessage:$isTeamsChannelMessage | Out-Null
+        Test-MtContext -SendMail:$isMail -SendTeamsMessage:$isTeamsChannelMessage `
+            -IncludePreview:$EffectiveIncludePreview | Out-Null
     }
 
     # Initialize MtSession after Graph connected.
@@ -409,22 +434,10 @@
         Write-Verbose 'Excluding LongRunning tests. Use -IncludeLongRunning to include them.'
     }
 
-    # If $Tag is not set and IncludePreview is not passed, run all tests except the ones with the "Preview" tag.
-    if (-not $Tag -and -not $IncludePreview.IsPresent) {
-        $ExcludeTag += 'Preview'
-        Write-Verbose 'Excluding Preview tests. Use -IncludePreview to include them.'
-    }
-
     # Include tests tagged as "LongRunning" if "Full" is included in the Tag parameter. Included for backward compatibility with deprecated tags.
     if ('Full' -in $Tag) {
         Write-Verbose 'Including long-running tests. Please use -IncludeLongRunning instead of the deprecated ''Full'' tag.'
         $ExcludeTag = $ExcludeTag | Where-Object { $_ -ne 'LongRunning' }
-    }
-
-    # Include tests tagged as "Preview" if "All" is included in the Tag parameter. Included for backward compatibility with deprecated tags.
-    if ('All' -in $Tag) {
-        Write-Verbose 'Including preview tests. Please use -IncludePreview instead of the deprecated ''All'' tag.'
-        $ExcludeTag = $ExcludeTag | Where-Object { $_ -ne 'Preview' }
     }
 
     # Warn about deprecated tag usage.

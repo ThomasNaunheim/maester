@@ -21,7 +21,7 @@ $__MtSession = @{
 	DnsCache               = @()
 	ExoCache               = @{}
 	OrcaCache              = @{}
-	AIAgentInfo            = $null
+	AIAgentInfo            = $null       # Get-MtAIAgentInfo cache: @{ Agents; Error }, Error is why no agent data is available
 	AzureDevOpsConnectionCache = $null
 	DataverseApiBase       = $null       # Resolved Dataverse OData API base URL (e.g. https://org123.api.crm.dynamics.com/api/data/v9.2)
 	DataverseResourceUrl   = $null   # Dataverse resource URL for token acquisition (e.g. https://org123.crm.dynamics.com)
@@ -30,6 +30,7 @@ $__MtSession = @{
 	GitHubCache            = @{}                 # Per-session REST response cache; cleared each Invoke-Maester run
 	ADCache                = @{}                 # Active Directory data cache
 	ADConnection           = $null               # Active Directory connection state
+	ADCredential           = $null               # Active Directory credential retained only for the connected session
 	ADCollectionTime       = $null               # Timestamp of last AD data collection
 	IncludeAssetInventory  = $false              # Set by Invoke-Maester -IncludeAssetInventory; gates per-test asset capture
 }

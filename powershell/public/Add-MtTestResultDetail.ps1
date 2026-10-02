@@ -77,7 +77,7 @@
         [ValidateSet('NotConnectedAzure', 'NotConnectedExchange', 'NotConnectedGraph', 'NotDotGovDomain', 'NotLicensedEntraIDP1', 'NotConnectedSecurityCompliance', 'NotConnectedTeams',
             'NotLicensedEntraIDP2', 'NotLicensedEntraIDGovernance', 'NotLicensedEntraWorkloadID', 'NotLicensedExoDlp', "LicensedEntraIDPremium", 'NotSupported', 'Custom',
             'NotLicensedMdo', 'NotLicensedMdoP2', 'NotLicensedMdoP1', 'NotLicensedAdvAudit', 'NotLicensedEop', 'Error', 'NotSupportedAppPermission', 'LimitedPermissions', 'NotLicensedDefenderXDR',
-            'NotLicensedCustomerLockbox', 'NotAuthorized', 'NotLicensedIntune', 'NotConnectedAzureDevOps', 'NotConnectedActiveDirectory', 'NotConnectedGitHub', 'NotConnectedSharePoint', 'NotLicensedEntraIDP2OrGovernance'
+            'NotLicensedCustomerLockbox', 'NotAuthorized', 'NotLicensedIntune', 'NotConnectedAzureDevOps', 'NotConnectedActiveDirectory', 'NotConnectedActiveDirectoryDNS', 'NotConnectedGitHub', 'NotConnectedSharePoint', 'NotLicensedEntraIDP2OrGovernance'
         )]
         [string] $SkippedBecause,
 
@@ -99,6 +99,14 @@
         [ValidateSet('Critical', 'High', 'Medium', 'Low', 'Info', '')]
         [string] $Severity
     )
+
+    # Skipping a test throws (Set-ItResult -Skipped). When a test function skips from inside a try block,
+    # its own catch intercepts that throw and reports it here as an error. The original skip detail is
+    # already recorded, so re-raise the skip instead of overwriting it with an error result.
+    if ($SkippedBecause -eq 'Error' -and $SkippedError -is [System.Management.Automation.ErrorRecord] -and
+        $SkippedError.FullyQualifiedErrorId -in @('PesterTestSkipped', 'PesterTestInconclusive', 'PesterTestPending')) {
+        throw $SkippedError
+    }
 
     $hasGraphResults = $GraphObjects -and $GraphObjectType
 

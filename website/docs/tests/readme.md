@@ -20,16 +20,287 @@ Every test is researched, written, and refined by security experts from the Maes
 
 | Suite | Tests | Description |
 | --- | ---: | --- |
-| [Maester](./maester) | 175 | Maester security tests for Microsoft 365 and Microsoft Entra configurations. |
+| [Maester](./maester) | 190 | Maester security tests for Microsoft 365 and Microsoft Entra configurations. |
 | [Entra ID SCA](./eidsca) | 44 | Entra ID Security Config Analyzer tests mapped to Microsoft Entra security configuration checks. |
 | [CISA](./cisa) | 79 | CISA SCuBA baseline tests for Microsoft 365 security configurations. |
 | [CIS](./cis) | 49 | CIS Benchmark controls implemented as Maester tests. |
 | [ORCA](./orca) | 67 | ORCA Exchange Online security configuration tests included in Maester. |
+| [Active Directory](./ad) | 270 | Active Directory inventory and security configuration tests for on-premises domains. |
 
 ## All Tests
 
 | Test ID | Title | Suite | Severity | Category |
 | --- | --- | --- | --- | --- |
+| [AD-CFG-01](./AD-CFG-01) | Tombstone lifetime configuration should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-02](./AD-CFG-02) | dSHeuristics count should be retrievable | Active Directory | High | AD.Config |
+| [AD-CFG-03](./AD-CFG-03) | SPN mappings should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-04](./AD-CFG-04) | Optional features count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-05](./AD-CFG-05) | Recycle bin enabled paths should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-06](./AD-CFG-06) | LDAP query policy count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-07](./AD-CFG-07) | Default query policy should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-08](./AD-CFG-08) | AuthN policy container count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-09](./AD-CFG-09) | AD activation objects count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-10](./AD-CFG-10) | Well-known security principals count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-11](./AD-CFG-11) | Registered DHCP servers count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-12](./AD-CFG-12) | Enterprise CA count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-13](./AD-CFG-13) | Certificate templates count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-14](./AD-CFG-14) | Enrollment templates count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-15](./AD-CFG-15) | Enrollment CA certificate details should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-16](./AD-CFG-16) | Trusted root CA count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-17](./AD-CFG-17) | Trusted root CA details should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-18](./AD-CFG-18) | Intermediate CA count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-19](./AD-CFG-19) | Intermediate CA details should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-20](./AD-CFG-20) | CRL distribution points count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-21](./AD-CFG-21) | NTAuth certificates count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-22](./AD-CFG-22) | KDS root keys count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-23](./AD-CFG-23) | SMTP site links count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-CFG-24](./AD-CFG-24) | IP site links count should be retrievable | Active Directory | Info | AD.Config |
+| [AD-COMP-01](./AD-COMP-01) | Computer disabled count should be retrievable | Active Directory | Info | AD.Computer |
+| [AD-COMP-02](./AD-COMP-02) | Computer dormant count should be retrievable | Active Directory | Info | AD.Computer |
+| [AD-COMP-03](./AD-COMP-03) | Computer CreatorSid count should be retrievable | Active Directory | Info | AD.Computer |
+| [AD-COMP-04](./AD-COMP-04) | Computer non-standard primary group count should be retrievable | Active Directory | Info | AD.Computer |
+| [AD-COMP-05](./AD-COMP-05) | Computer SID History count should be retrievable | Active Directory | Medium | AD.Computer |
+| [AD-COMP-06](./AD-COMP-06) | Computer default container count should be retrievable | Active Directory | Info | AD.Computer |
+| [AD-COMP-07](./AD-COMP-07) | Computer OU count should be retrievable | Active Directory | Info | AD.Computer |
+| [AD-COMP-08](./AD-COMP-08) | Computer per OU average should be retrievable | Active Directory | Info | AD.Computer |
+| [AD-COMP-09](./AD-COMP-09) | Computer delegation count should be retrievable | Active Directory | Info | AD.Computer |
+| [AD-COMP-10](./AD-COMP-10) | Computer delegation details should be retrievable | Active Directory | Info | AD.Computer |
+| [AD-DACL-01](./AD-DACL-01) | Distinct DACL object count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-02](./AD-DACL-02) | OU DACL entry count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-03](./AD-DACL-03) | Conflict object count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-04](./AD-DACL-04) | Conflict object details should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-05](./AD-DACL-05) | Deny ACE count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-06](./AD-DACL-06) | Deny ACE details should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-07](./AD-DACL-07) | Distinct DACL identity count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-08](./AD-DACL-08) | DACL ACE distribution per identity should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-09](./AD-DACL-09) | Privileged allow ACE count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-10](./AD-DACL-10) | Privileged allow ACE details should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-11](./AD-DACL-11) | Privileged extended right count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-12](./AD-DACL-12) | Privileged extended right details should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-13](./AD-DACL-13) | Privileged extended right identities should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-14](./AD-DACL-14) | Non-inherited ACE count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-15](./AD-DACL-15) | Unresolved SID count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-16](./AD-DACL-16) | Unresolved SID details should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-17](./AD-DACL-17) | Inherited object type count should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DACL-18](./AD-DACL-18) | Inherited object type details should be retrievable | Active Directory | Info | AD.DACL |
+| [AD-DC-01](./AD-DC-01) | DC site coverage count should be retrievable | Active Directory | Info | AD.DomainController |
+| [AD-DC-02](./AD-DC-02) | SMBv1 should be disabled on all domain controllers | Active Directory | Unknown | AD.DomainController |
+| [AD-DC-03](./AD-DC-03) | SMBv3.1.1 enabled count should be retrievable | Active Directory | Info | AD.DomainController |
+| [AD-DC-04](./AD-DC-04) | SMB signing should be enabled on all domain controllers | Active Directory | Unknown | AD.DomainController |
+| [AD-DC-05](./AD-DC-05) | DCs with all FSMO roles count should be retrievable | Active Directory | Info | AD.DomainController |
+| [AD-DC-06](./AD-DC-06) | FSMO role holder details should be retrievable | Active Directory | Info | AD.DomainController |
+| [AD-DC-07](./AD-DC-07) | DC operating system count should be retrievable | Active Directory | High | AD.DomainController |
+| [AD-DC-08](./AD-DC-08) | DC operating system details should be retrievable | Active Directory | High | AD.DomainController |
+| [AD-DCD-01](./AD-DCD-01) | DC non-standard LDAP port count should be retrievable | Active Directory | Info | AD.DomainController |
+| [AD-DCD-02](./AD-DCD-02) | DC non-standard LDAPS port count should be retrievable | Active Directory | Info | AD.DomainController |
+| [AD-DCD-03](./AD-DCD-03) | Read-only domain controller count should be retrievable | Active Directory | Info | AD.DomainController |
+| [AD-DCD-04](./AD-DCD-04) | Non-Global Catalog DC count should be retrievable | Active Directory | Info | AD.DomainController |
+| [AD-DCOMP-01](./AD-DCOMP-01) | Computers with unconstrained delegation count should be retrievable | Active Directory | Critical | AD.Security |
+| [AD-DCOMP-02](./AD-DCOMP-02) | Non-DC computers should not have unconstrained delegation | Active Directory | Critical | AD.Security |
+| [AD-DCOMP-03](./AD-DCOMP-03) | Non-DC computers with constrained delegation count should be retrievable | Active Directory | High | AD.Security |
+| [AD-DCOMP-04](./AD-DCOMP-04) | Computer operating system count should be retrievable | Active Directory | Info | AD.Security |
+| [AD-DCOMP-05](./AD-DCOMP-05) | Computer operating system details should be retrievable | Active Directory | Info | AD.Security |
+| [AD-DCOMP-06](./AD-DCOMP-06) | Stale enabled computer count should be retrievable | Active Directory | Medium | AD.Security |
+| [AD-DCOMP-07](./AD-DCOMP-07) | Computer DNS host name count should be retrievable | Active Directory | Info | AD.Security |
+| [AD-DCOMP-08](./AD-DCOMP-08) | Computer DNS zone count should be retrievable | Active Directory | Info | AD.Security |
+| [AD-DCOMP-09](./AD-DCOMP-09) | Computer DNS zone details should be retrievable | Active Directory | Info | AD.Security |
+| [AD-DFSR-01](./AD-DFSR-01) | DFS-R subscription count should be retrievable | Active Directory | Info | AD.Replication |
+| [AD-DNS-01](./AD-DNS-01) | DNS zone count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-02](./AD-DNS-02) | Zones with only SOA/NS records should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-03](./AD-DNS-03) | Root servers with incorrect IPs should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-04](./AD-DNS-04) | Root server incorrect IP details should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-05](./AD-DNS-05) | Dynamic DNS record count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-06](./AD-DNS-06) | Zones with non-default records should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-07](./AD-DNS-07) | Zone record count details should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-08](./AD-DNS-08) | Zone delegation count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-09](./AD-DNS-09) | Zone delegation details should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-10](./AD-DNS-10) | SOA record details should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-11](./AD-DNS-11) | AD DS SRV record count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-12](./AD-DNS-12) | AD DS SRV record details should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-13](./AD-DNS-13) | DNSSEC record count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-14](./AD-DNS-14) | Empty zone count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-15](./AD-DNS-15) | Duplicate zone count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-16](./AD-DNS-16) | Reverse lookup zone count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-17](./AD-DNS-17) | Non-standard zone count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-18](./AD-DNS-18) | Reverse zone network count should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DNS-19](./AD-DNS-19) | Reverse zone network details should be retrievable | Active Directory | Info | AD.DNS |
+| [AD-DOM-01](./AD-DOM-01) | Domain functional level should be retrievable | Active Directory | Medium | AD.Domain |
+| [AD-DOM-02](./AD-DOM-02) | Machine account quota should be retrievable | Active Directory | Low | AD.Domain |
+| [AD-DOM-03](./AD-DOM-03) | Domain controller count should be retrievable | Active Directory | Info | AD.Domain |
+| [AD-DOM-04](./AD-DOM-04) | RIDs remaining should be retrievable | Active Directory | Info | AD.Domain |
+| [AD-DOM-05](./AD-DOM-05) | Domain name standard compliance should be retrievable | Active Directory | Info | AD.Domain |
+| [AD-DOM-06](./AD-DOM-06) | Domain name non-standard details should be retrievable | Active Directory | Info | AD.Domain |
+| [AD-DOM-07](./AD-DOM-07) | NetBIOS name standard compliance should be retrievable | Active Directory | Info | AD.Domain |
+| [AD-DOM-08](./AD-DOM-08) | NetBIOS name non-standard details should be retrievable | Active Directory | Info | AD.Domain |
+| [AD-DOMS-01](./AD-DOMS-01) | Allowed DNS suffixes count should be retrievable | Active Directory | Info | AD.Domain |
+| [AD-FEAT-01](./AD-FEAT-01) | Optional feature count should be retrievable | Active Directory | Info | AD.Replication |
+| [AD-FEAT-02](./AD-FEAT-02) | Optional feature enabled details should be retrievable | Active Directory | Info | AD.Replication |
+| [AD-FGPP-01](./AD-FGPP-01) | Fine-grained password policy count should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-FGPP-02](./AD-FGPP-02) | Fine-grained password policy value count should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-FGPP-03](./AD-FGPP-03) | Fine-grained password policy setting counts should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-FGPP-04](./AD-FGPP-04) | Fine-grained password policy application targets should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-FOR-01](./AD-FOR-01) | Forest functional level should be retrievable | Active Directory | Medium | AD.Forest |
+| [AD-FOR-02](./AD-FOR-02) | Forest domain count should be retrievable | Active Directory | Info | AD.Forest |
+| [AD-FOR-03](./AD-FOR-03) | Tombstone lifetime should be retrievable | Active Directory | Info | AD.Forest |
+| [AD-FOR-04](./AD-FOR-04) | Recycle Bin status should be retrievable | Active Directory | Info | AD.Forest |
+| [AD-FORS-01](./AD-FORS-01) | UPN suffixes count should be retrievable | Active Directory | Info | AD.Forest |
+| [AD-FORS-02](./AD-FORS-02) | UPN suffixes details should be retrievable | Active Directory | Info | AD.Forest |
+| [AD-FORS-03](./AD-FORS-03) | SPN suffixes count should be retrievable | Active Directory | Info | AD.Forest |
+| [AD-FORS-04](./AD-FORS-04) | Cross-forest references count should be retrievable | Active Directory | Info | AD.Forest |
+| [AD-GCHG-01](./AD-GCHG-01) | Average group membership changes per year should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-01](./AD-GMC-01) | Distinct groups with members count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-02](./AD-GMC-02) | Distinct account types of members count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-03](./AD-GMC-03) | Member account types breakdown should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-04](./AD-GMC-04) | Trust members count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-05](./AD-GMC-05) | Trust members details by group should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-06](./AD-GMC-06) | Foreign SID principals count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-07](./AD-GMC-07) | Foreign SID details by domain should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-08](./AD-GMC-08) | Empty non-privileged group count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-09](./AD-GMC-09) | Empty non-privileged group details should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-10](./AD-GMC-10) | Privileged groups with members count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GMC-11](./AD-GMC-11) | Privileged groups with members details should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GPO-01](./AD-GPO-01) | GPO total count should be retrievable | Active Directory | Info | AD.GPO |
+| [AD-GPO-02](./AD-GPO-02) | GPO created before 2020 count should be retrievable | Active Directory | Info | AD.GPO |
+| [AD-GPO-03](./AD-GPO-03) | GPO stale-before-2020 count should be retrievable | Active Directory | Info | AD.GPO |
+| [AD-GPO-04](./AD-GPO-04) | Unlinked GPO count should be compliant | Active Directory | Unknown | AD.GPO |
+| [AD-GPO-05](./AD-GPO-05) | GPO unlinked details should be compliant | Active Directory | Unknown | AD.GPO |
+| [AD-GPOL-01](./AD-GPOL-01) | GPO linked count should be retrievable | Active Directory | Info | AD.GPO |
+| [AD-GPOL-02](./AD-GPOL-02) | Disabled GPO link count should be retrievable | Active Directory | Info | AD.GPO |
+| [AD-GPOL-03](./AD-GPOL-03) | GPO unlinked target count should be compliant | Active Directory | Unknown | AD.GPO |
+| [AD-GPOL-04](./AD-GPOL-04) | Enforced GPO link count should be retrievable | Active Directory | Unknown | AD.GPO |
+| [AD-GPOL-05](./AD-GPOL-05) | GPO blocked inheritance count should be compliant | Active Directory | Unknown | AD.GPO |
+| [AD-GPOL-06](./AD-GPOL-06) | GPO linked OU count should be retrievable | Active Directory | Info | AD.GPO |
+| [AD-GPOREP-01](./AD-GPOREP-01) | GPOs without permissions count should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-02](./AD-GPOREP-02) | GPOs without permissions details should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-03](./AD-GPOREP-03) | GPOs without authenticated users count should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-04](./AD-GPOREP-04) | GPOs without authenticated users details should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-05](./AD-GPOREP-05) | GPOs without enterprise domain controllers count should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-06](./AD-GPOREP-06) | GPOs without domain computers count should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-07](./AD-GPOREP-07) | GPOs with deny ACE count should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-08](./AD-GPOREP-08) | GPOs with deny ACE details should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-09](./AD-GPOREP-09) | GPO inherited permissions count should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-10](./AD-GPOREP-10) | GPO no-apply Group Policy ACE count should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOREP-11](./AD-GPOREP-11) | GPO no-apply Group Policy ACE details should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOREP-12](./AD-GPOREP-12) | GPO disabled link count should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOREP-13](./AD-GPOREP-13) | GPO disabled link details should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOREP-14](./AD-GPOREP-14) | GPO enforcement count should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOREP-15](./AD-GPOREP-15) | GPO version mismatch count should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOREP-16](./AD-GPOREP-16) | GPO version mismatch details should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOREP-17](./AD-GPOREP-17) | GPO Cpassword found count should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-18](./AD-GPOREP-18) | GPO Cpassword found details should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-19](./AD-GPOREP-19) | GPO default password found count should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOREP-20](./AD-GPOREP-20) | GPO default password found details should be retrievable | Active Directory | Unknown | AD.GPOState |
+| [AD-GPOS-01](./AD-GPOS-01) | GPO state total count should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOS-02](./AD-GPOS-02) | WMI filter count should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOS-03](./AD-GPOS-03) | WMI filter details should be compliant | Active Directory | Info | AD.GPOState |
+| [AD-GPOS-04](./AD-GPOS-04) | Disabled GPO settings count should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOS-05](./AD-GPOS-05) | Computer disabled GPO settings details should be compliant | Active Directory | Info | AD.GPOState |
+| [AD-GPOS-06](./AD-GPOS-06) | User disabled GPO settings details should be compliant | Active Directory | Info | AD.GPOState |
+| [AD-GPOS-07](./AD-GPOS-07) | All disabled GPO settings details should be compliant | Active Directory | Info | AD.GPOState |
+| [AD-GPOS-08](./AD-GPOS-08) | GPO owner distinct count should be retrievable | Active Directory | Info | AD.GPOState |
+| [AD-GPOS-09](./AD-GPOS-09) | GPO owner details should be accessible | Active Directory | Info | AD.GPOState |
+| [AD-GRP-01](./AD-GRP-01) | Group AdminCount should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GRP-02](./AD-GRP-02) | Groups in container objects count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GRP-03](./AD-GRP-03) | Stale groups count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GRP-04](./AD-GRP-04) | Groups with manager count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GRP-05](./AD-GRP-05) | Group SID History count should be retrievable | Active Directory | Medium | AD.Group |
+| [AD-GRP-06](./AD-GRP-06) | Distribution group count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GRP-07](./AD-GRP-07) | Security group count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GRP-08](./AD-GRP-08) | Domain local group count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GRP-09](./AD-GRP-09) | Global group count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-GRP-10](./AD-GRP-10) | Universal group count should be retrievable | Active Directory | Info | AD.Group |
+| [AD-KRBTGT-01](./AD-KRBTGT-01) | KRBTGT password last set should be retrievable | Active Directory | High | AD.Security |
+| [AD-KRBTGT-02](./AD-KRBTGT-02) | KRBTGT last logon should be retrievable | Active Directory | Info | AD.Security |
+| [AD-KRBTGT-03](./AD-KRBTGT-03) | KRBTGT should have standard UAC settings (disabled account) | Active Directory | Unknown | AD.Security |
+| [AD-MSA-01](./AD-MSA-01) | Managed service account count should be retrievable | Active Directory | Info | AD.Security |
+| [AD-OU-01](./AD-OU-01) | OU overlapping name count should be retrievable | Active Directory | Info | AD.OU |
+| [AD-OU-02](./AD-OU-02) | OU at domain root count should be retrievable | Active Directory | Info | AD.OU |
+| [AD-OU-03](./AD-OU-03) | OU stale count should be retrievable | Active Directory | Info | AD.OU |
+| [AD-OU-04](./AD-OU-04) | OU empty count should be retrievable | Active Directory | Info | AD.OU |
+| [AD-OU-05](./AD-OU-05) | OU empty details should be retrievable | Active Directory | Info | AD.OU |
+| [AD-PRINT-01](./AD-PRINT-01) | Printer total count should be retrievable | Active Directory | Info | AD.Printer |
+| [AD-PWDPOL-01](./AD-PWDPOL-01) | Password history count should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-PWDPOL-02](./AD-PWDPOL-02) | Password maximum age should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-PWDPOL-03](./AD-PWDPOL-03) | Password minimum length should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-PWDPOL-04](./AD-PWDPOL-04) | Password complexity requirement should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-PWDPOL-05](./AD-PWDPOL-05) | Password reversible encryption status should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-PWDPOL-06](./AD-PWDPOL-06) | Account lockout duration should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-PWDPOL-07](./AD-PWDPOL-07) | Account lockout threshold should be retrievable | Active Directory | Info | AD.PasswordPolicy |
+| [AD-REPL-01](./AD-REPL-01) | Disabled replication connection count should be retrievable | Active Directory | Info | AD.Replication |
+| [AD-REPL-02](./AD-REPL-02) | Non-auto replication connection count should be retrievable | Active Directory | Info | AD.Replication |
+| [AD-ROOTDSE-01](./AD-ROOTDSE-01) | Supported SASL mechanism count should be retrievable | Active Directory | Info | AD.Replication |
+| [AD-ROOTDSE-02](./AD-ROOTDSE-02) | Supported SASL mechanism details should be retrievable | Active Directory | Info | AD.Replication |
+| [AD-ROOTDSE-03](./AD-ROOTDSE-03) | Root DSE synchronized status should be retrievable | Active Directory | Unknown | AD.Replication |
+| [AD-SCH-01](./AD-SCH-01) | Schema modification year count should be retrievable | Active Directory | Info | AD.Schema |
+| [AD-SCH-02](./AD-SCH-02) | Schema modification year details should be retrievable | Active Directory | Info | AD.Schema |
+| [AD-SCH-03](./AD-SCH-03) | Schema version entry count should be retrievable | Active Directory | Info | AD.Schema |
+| [AD-SCH-04](./AD-SCH-04) | Schema version details should be retrievable | Active Directory | Info | AD.Schema |
+| [AD-SCH-05](./AD-SCH-05) | LAPS installation status should be retrievable | Active Directory | Unknown | AD.Schema |
+| [AD-SITE-01](./AD-SITE-01) | Site total count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SITE-02](./AD-SITE-02) | Sites without domain controllers count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SITE-03](./AD-SITE-03) | Sites without domain controllers details should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SITE-04](./AD-SITE-04) | Sites without subnet associations count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SITE-05](./AD-SITE-05) | Sites without subnet associations details should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SPN-01](./AD-SPN-01) | Computer SPN service class count should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-02](./AD-SPN-02) | Computer SPN service class usage should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-03](./AD-SPN-03) | Computer SPN unknown service class count should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-04](./AD-SPN-04) | Computer SPN unknown service class details should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-05](./AD-SPN-05) | Computer SPN non-FQDN hosts should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-06](./AD-SPN-06) | User SPN total count should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-07](./AD-SPN-07) | User SPN service class count should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-08](./AD-SPN-08) | User SPN service class usage should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-09](./AD-SPN-09) | User SPN unknown service class count should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-10](./AD-SPN-10) | User SPN unknown service class details should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-11](./AD-SPN-11) | User SPN non-FQDN hosts should be retrievable | Active Directory | Info | AD.SPN |
+| [AD-SPN-12](./AD-SPN-12) | User SPN domain admin count should be retrievable | Active Directory | Critical | AD.SPN |
+| [AD-SPN-13](./AD-SPN-13) | User SPN domain admin details should be retrievable | Active Directory | Critical | AD.SPN |
+| [AD-SUB-01](./AD-SUB-01) | Subnet total count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-02](./AD-SUB-02) | Sites with subnet associations count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-03](./AD-SUB-03) | Catch-all subnets count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-04](./AD-SUB-04) | IPv6 subnets count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-05](./AD-SUB-05) | IPv6 catch-all subnets count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-06](./AD-SUB-06) | Non-RFC1918 (public IP) subnets count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-07](./AD-SUB-07) | Non-RFC1918 (public IP) subnets details should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-08](./AD-SUB-08) | Distinct first octets count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-09](./AD-SUB-09) | Distinct first two octets (/16 networks) count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-10](./AD-SUB-10) | Distinct first three octets (/24 networks) count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-SUB-11](./AD-SUB-11) | Subnets without site associations count should be retrievable | Active Directory | Info | AD.Site |
+| [AD-TRUST-01](./AD-TRUST-01) | Trust total count should be retrievable | Active Directory | Info | AD.Trust |
+| [AD-TRUST-02](./AD-TRUST-02) | Trust inter-forest count should be retrievable | Active Directory | Info | AD.Trust |
+| [AD-TRUST-03](./AD-TRUST-03) | Trust quarantined count should be retrievable | Active Directory | High | AD.Trust |
+| [AD-TRUST-04](./AD-TRUST-04) | Trust non-quarantined details should be retrievable | Active Directory | High | AD.Trust |
+| [AD-TRUST-05](./AD-TRUST-05) | Trust configuration details should be retrievable | Active Directory | Info | AD.Trust |
+| [AD-TRUST-06](./AD-TRUST-06) | Trust stale count should be retrievable | Active Directory | Info | AD.Trust |
+| [AD-TRUST-07](./AD-TRUST-07) | Trust stale details should be retrievable | Active Directory | Info | AD.Trust |
+| [AD-USER-01](./AD-USER-01) | Disabled user count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-02](./AD-USER-02) | Dormant enabled user count should be retrievable | Active Directory | High | AD.User |
+| [AD-USER-03](./AD-USER-03) | Non-expiring password user count should be retrievable | Active Directory | High | AD.User |
+| [AD-USER-04](./AD-USER-04) | Reversible encryption user count should be retrievable | Active Directory | Medium | AD.User |
+| [AD-USER-05](./AD-USER-05) | Delegation-enabled user count should be retrievable | Active Directory | High | AD.User |
+| [AD-USER-06](./AD-USER-06) | DES-only Kerberos user count should be retrievable | Active Directory | High | AD.User |
+| [AD-USER-07](./AD-USER-07) | No pre-authentication user count should be retrievable | Active Directory | High | AD.User |
+| [AD-USER-08](./AD-USER-08) | Never-logged-in enabled user count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-09](./AD-USER-09) | Password-not-required user count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-10](./AD-USER-10) | Workstation-restricted user count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-11](./AD-USER-11) | User AdminCount count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-12](./AD-USER-12) | User non-standard primary group count should be retrievable | Active Directory | Medium | AD.User |
+| [AD-USER-13](./AD-USER-13) | User SID History count should be retrievable | Active Directory | Medium | AD.User |
+| [AD-USER-14](./AD-USER-14) | User SPN count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-15](./AD-USER-15) | User manager count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-16](./AD-USER-16) | User home directory count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-17](./AD-USER-17) | User profile path count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-18](./AD-USER-18) | User script path count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-19](./AD-USER-19) | User in container count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-20](./AD-USER-20) | Known service account count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-21](./AD-USER-21) | Known service account details should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-22](./AD-USER-22) | Built-in administrator account count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-23](./AD-USER-23) | Enabled built-in administrator details should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-24](./AD-USER-24) | Built-in administrator last logon details should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-25](./AD-USER-25) | Built-in administrator password age details should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-26](./AD-USER-26) | Honey pot user count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-27](./AD-USER-27) | Honey pot user details should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-28](./AD-USER-28) | User delegation configured count should be retrievable | Active Directory | Info | AD.User |
+| [AD-USER-29](./AD-USER-29) | User delegation details should be retrievable | Active Directory | Info | AD.User |
 | [CIS.GH.1.2.2](./CIS.GH.1.2.2) | (L1) Ensure repository creation is limited to specific members | CIS | Medium | CIS GH Level 1 |
 | [CIS.GH.1.2.3](./CIS.GH.1.2.3) | (L1) Ensure repository deletion is limited to specific users | CIS | High | CIS GH Level 1 |
 | [CIS.GH.1.2.4](./CIS.GH.1.2.4) | (L1) Ensure issue deletion is limited to specific users | CIS | Medium | CIS GH Level 1 |
@@ -41,10 +312,10 @@ Every test is researched, written, and refined by security experts from the Maes
 | [CIS.M365.1.2.2](./CIS.M365.1.2.2) | (L1) Ensure sign-in to shared mailboxes is blocked | CIS | High | CIS E3 Level 1 |
 | [CIS.M365.1.3.1](./CIS.M365.1.3.1) | (L1) Ensure the 'Password expiration policy' is set to 'Set passwords to never expire (recommended)' | CIS | High | CIS E3 Level 1 |
 | [CIS.M365.1.3.3](./CIS.M365.1.3.3) | (L2) Ensure 'External sharing' of calendars is not available | CIS | Medium | CIS E3 Level 2 |
-| [CIS.M365.1.3.4](./CIS.M365.1.3.4) | Ensure | CIS | Unknown | CIS E3 Level 1 |
-| [CIS.M365.1.3.5](./CIS.M365.1.3.5) | Ensure internal phishing protection for Forms is enabled | CIS | Unknown | CIS E3 Level 1 |
+| [CIS.M365.1.3.4](./CIS.M365.1.3.4) | (L1) Ensure 'User owned apps and services' is restricted | CIS | Unknown | CIS E3 Level 1 |
+| [CIS.M365.1.3.5](./CIS.M365.1.3.5) | (L1) Ensure internal phishing protection for Forms is enabled | CIS | Unknown | CIS E3 Level 1 |
 | [CIS.M365.1.3.6](./CIS.M365.1.3.6) | (L2) Ensure the customer lockbox feature is enabled | CIS | High | CIS E5 Level 2 |
-| [CIS.M365.1.3.7](./CIS.M365.1.3.7) | Ensure | CIS | Unknown | CIS E3 Level 2 |
+| [CIS.M365.1.3.7](./CIS.M365.1.3.7) | (L2) Ensure 'third-party storage services' are restricted in 'Microsoft 365 on the web' | CIS | Unknown | CIS E3 Level 2 |
 | [CIS.M365.2.1.1](./CIS.M365.2.1.1) | (L2) Ensure Safe Links for Office Applications is Enabled (Only Checks Default Policy) | CIS | Medium | CIS E5 Level 2 |
 | [CIS.M365.2.1.11](./CIS.M365.2.1.11) | (L2) Ensure comprehensive attachment filtering is applied | CIS | High | CIS E3 Level 2 |
 | [CIS.M365.2.1.12](./CIS.M365.2.1.12) | (L1) Ensure the connection filter IP allow list is not used (Only Checks Default Policy) | CIS | Medium | CIS E3 Level 1 |
@@ -58,24 +329,24 @@ Every test is researched, written, and refined by security experts from the Maes
 | [CIS.M365.2.1.9](./CIS.M365.2.1.9) | (L1) Ensure that DKIM is enabled for all Exchange Online Domains | CIS | High | CIS E3 Level 1 |
 | [CIS.M365.2.4.4](./CIS.M365.2.4.4) | (L1) Ensure Zero-hour auto purge for Microsoft Teams is on (Only Checks ZAP is enabled) | CIS | Medium | CIS E5 Level 1 |
 | [CIS.M365.3.1.1](./CIS.M365.3.1.1) | (L1) Ensure Microsoft 365 audit log search is Enabled | CIS | High | CIS E3 Level 1 |
-| [CIS.M365.4.1](./CIS.M365.4.1) | Ensure devices without a compliance policy are marked | CIS | Unknown | CIS E3 Level 1 |
-| [CIS.M365.5.1.2.2](./CIS.M365.5.1.2.2) | Ensure users cannot register applications | CIS | Unknown | CIS E3 Level 1 |
-| [CIS.M365.5.1.2.3](./CIS.M365.5.1.2.3) | Ensure | CIS | Unknown | CIS E3 Level 1 |
-| [CIS.M365.5.1.4.6](./CIS.M365.5.1.4.6) | Ensure users are restricted from recovering BitLocker keys | CIS | Unknown | CIS E3 Level 2 |
-| [CIS.M365.5.1.5.1](./CIS.M365.5.1.5.1) | Ensure user consent to apps accessing company data on their behalf is not allowed | CIS | Unknown | CIS E3 Level 2 |
-| [CIS.M365.5.1.5.2](./CIS.M365.5.1.5.2) | Ensure the admin consent workflow is enabled | CIS | Unknown | CIS E3 Level 1 |
-| [CIS.M365.5.1.6.2](./CIS.M365.5.1.6.2) | Ensure that guest user access is restricted | CIS | Unknown | CIS E3 Level 1 |
-| [CIS.M365.5.2.3.5](./CIS.M365.5.2.3.5) | Ensure weak authentication methods are disabled | CIS | Unknown | CIS E3 Level 1 |
-| [CIS.M365.6.5.3](./CIS.M365.6.5.3) | Ensure additional storage providers are restricted in Outlook on the web | CIS | Unknown | CIS E3 Level 2 |
-| [CIS.M365.7.2.11](./CIS.M365.7.2.11) | Ensure the SharePoint default sharing link permission is set | CIS | Unknown | SharePoint Online |
-| [CIS.M365.7.2.2](./CIS.M365.7.2.2) | Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled | CIS | Unknown | SharePoint Online |
-| [CIS.M365.7.2.5](./CIS.M365.7.2.5) | Ensure that SharePoint guest users cannot share items they don | CIS | Unknown | SharePoint Online |
-| [CIS.M365.7.2.7](./CIS.M365.7.2.7) | Ensure link sharing is restricted in SharePoint and OneDrive | CIS | Unknown | SharePoint Online |
-| [CIS.M365.7.2.9](./CIS.M365.7.2.9) | Ensure guest access to a site or OneDrive will expire automatically | CIS | Unknown | SharePoint Online |
-| [CIS.M365.7.3.1](./CIS.M365.7.3.1) | Ensure Office 365 SharePoint infected files are disallowed for download | CIS | Unknown | SharePoint Online |
+| [CIS.M365.4.1](./CIS.M365.4.1) | (L1) Ensure devices without a compliance policy are marked 'not compliant' | CIS | Unknown | CIS E3 Level 1 |
+| [CIS.M365.5.1.2.2](./CIS.M365.5.1.2.2) | (L1) Ensure users cannot register applications | CIS | Unknown | CIS E3 Level 1 |
+| [CIS.M365.5.1.2.3](./CIS.M365.5.1.2.3) | (L1) Ensure 'Restrict non-admin users from creating tenants' is set to 'Yes' | CIS | Unknown | CIS E3 Level 1 |
+| [CIS.M365.5.1.4.6](./CIS.M365.5.1.4.6) | (L2) Ensure users are restricted from recovering BitLocker keys | CIS | Unknown | CIS E3 Level 2 |
+| [CIS.M365.5.1.5.1](./CIS.M365.5.1.5.1) | (L2) Ensure user consent to apps accessing company data on their behalf is not allowed | CIS | Unknown | CIS E3 Level 2 |
+| [CIS.M365.5.1.5.2](./CIS.M365.5.1.5.2) | (L1) Ensure the admin consent workflow is enabled | CIS | Unknown | CIS E3 Level 1 |
+| [CIS.M365.5.1.6.2](./CIS.M365.5.1.6.2) | (L1) Ensure that guest user access is restricted | CIS | Unknown | CIS E3 Level 1 |
+| [CIS.M365.5.2.3.5](./CIS.M365.5.2.3.5) | (L1) Ensure weak authentication methods are disabled | CIS | Unknown | CIS E3 Level 1 |
+| [CIS.M365.6.5.3](./CIS.M365.6.5.3) | (L2) Ensure additional storage providers are restricted in Outlook on the web | CIS | Unknown | CIS E3 Level 2 |
+| [CIS.M365.7.2.11](./CIS.M365.7.2.11) | (L1) Ensure the SharePoint default sharing link permission is set | CIS | Unknown | SharePoint Online |
+| [CIS.M365.7.2.2](./CIS.M365.7.2.2) | (L1) Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled | CIS | Unknown | SharePoint Online |
+| [CIS.M365.7.2.5](./CIS.M365.7.2.5) | (L2) Ensure that SharePoint guest users cannot share items they don't own | CIS | Unknown | SharePoint Online |
+| [CIS.M365.7.2.7](./CIS.M365.7.2.7) | (L1) Ensure link sharing is restricted in SharePoint and OneDrive | CIS | Unknown | SharePoint Online |
+| [CIS.M365.7.2.9](./CIS.M365.7.2.9) | (L1) Ensure guest access to a site or OneDrive will expire automatically | CIS | Unknown | SharePoint Online |
+| [CIS.M365.7.3.1](./CIS.M365.7.3.1) | (L2) Ensure Office 365 SharePoint infected files are disallowed for download | CIS | Unknown | SharePoint Online |
 | [CIS.M365.8.1.1](./CIS.M365.8.1.1) | (L2) Ensure external file sharing in Teams is enabled for only approved cloud storage services | CIS | Medium | CIS E3 Level 2 |
 | [CIS.M365.8.2.2](./CIS.M365.8.2.2) | (L1) Ensure communication with unmanaged Teams users is disabled | CIS | Medium | CIS E3 Level 1 |
-| [CIS.M365.8.2.3](./CIS.M365.8.2.3) | Ensure external Teams users cannot initiate conversations | CIS | Unknown | CIS E3 Level 1 |
+| [CIS.M365.8.2.3](./CIS.M365.8.2.3) | (L1) Ensure external Teams users cannot initiate conversations | CIS | Unknown | CIS E3 Level 1 |
 | [CIS.M365.8.4.1](./CIS.M365.8.4.1) | (L1) Ensure app permission policies are configured | CIS | High | CIS E3 Level 1 |
 | [CIS.M365.8.5.3](./CIS.M365.8.5.3) | (L1) Ensure only people in my org can bypass the lobby | CIS | Medium | CIS E3 Level 1 |
 | [CIS.M365.8.6.1](./CIS.M365.8.6.1) | (L1) Ensure users can report security concerns in Teams | CIS | Medium | CIS E5 Level 1 |
@@ -225,7 +496,7 @@ Every test is researched, written, and refined by security experts from the Maes
 | [MT.1021](./MT.1021) | Security Defaults are enabled. | Maester | High | CA |
 | [MT.1022](./MT.1022) | All users utilizing a P1 license should be licensed. | Maester | Medium | CA |
 | [MT.1023](./MT.1023) | All users utilizing a P2 license should be licensed. | Maester | Medium | CA |
-| [MT.1024](./MT.1024) | MT.1024.$($RecommendationId -replace | Maester | Unknown | Entra |
+| [MT.1024](./MT.1024) | MT.1024.$($RecommendationId -replace '^[^_]+_', ''): $($_.displayName) | Maester | Unknown | Entra |
 | [MT.1025](./MT.1025) | No external user with permanent role assignment on Control Plane. | Maester | High | Privileged |
 | [MT.1026](./MT.1026) | No hybrid user with permanent role assignment on Control Plane. | Maester | High | Privileged |
 | [MT.1027](./MT.1027) | No Service Principal with Client Secret and permanent role assignment on Control Plane. | Maester | High | Privileged |
@@ -373,10 +644,25 @@ Every test is researched, written, and refined by security experts from the Maes
 | [MT.1196](./MT.1196) | Review who can change attributes used by dynamic group rules | Maester | Medium | Entra |
 | [MT.1197](./MT.1197) | Dynamic groups should not use the retiring memberOf rule operator | Maester | High | Entra |
 | [MT.1198](./MT.1198) | App registration certificates should not have excessive validity periods. | Maester | Medium | App |
+| [MT.1199](./MT.1199) | App registration credentials should not be expired or expiring soon. | Maester | Medium | App |
+| [MT.1200](./MT.1200) | Agent Identities should have an active Agent Identity Blueprint Principal (Preview) | Maester | Medium | Entra |
+| [MT.1201](./MT.1201) | Agent Users should have an existing parent Agent Identity (Preview) | Maester | Medium | Entra |
+| [MT.1203](./MT.1203) | Agent Identity Blueprint Principals should have an existing Blueprint (Preview) | Maester | Medium | Entra |
+| [MT.1204](./MT.1204) | Agent Identities, Blueprint Principals, and Blueprints should have active, enabled owners (Preview) | Maester | Medium | Entra |
+| [MT.1205](./MT.1205) | Agent Identity Blueprints and Blueprint Principals should have assigned sponsors (Preview) | Maester | Medium | Entra |
+| [MT.1206](./MT.1206) | Enabled Agent Identities should have active sign-in activity within the last 180 days (Preview) | Maester | Medium | Entra |
+| [MT.1207](./MT.1207) | Foreign or multi-tenant Agent Blueprint Principals and Agent Identities should not hold privileged directory roles (Preview) | Maester | High | Entra |
+| [MT.1208](./MT.1208) | Agent Identity Blueprints should not have expired, excessive, or long-lived client credentials (Preview) | Maester | High | Entra |
+| [MT.1209](./MT.1209) | Agent Identities and Blueprint Principals should not be assigned privileged Entra directory roles (Preview) | Maester | High | Entra |
+| [MT.1210](./MT.1210) | Agent Users should not have privileged directory roles or membership in role-assignable groups (Preview) | Maester | High | Entra |
+| [MT.1211](./MT.1211) | Agent Identity Blueprints should not use the allAllowed inheritance pattern for delegated scopes or application roles (Preview) | Maester | High | Entra |
+| [MT.1212](./MT.1212) | Agent Identity Blueprint Principals should require assignment for the application roles they expose (Preview) | Maester | Medium | Entra |
+| [MT.1213](./MT.1213) | Agent Identity Blueprints should not use wildcard or plain-http redirect URIs (Preview) | Maester | High | Entra |
 | [MT.1214](./MT.1214) | Ensure macOS compliance policy requires System Integrity Protection | Maester | Medium | Intune |
 | [MT.1215](./MT.1215) | Ensure Gatekeeper restricts macOS app download locations | Maester | Medium | Intune |
 | [MT.1216](./MT.1216) | Ensure macOS compliance policy requires a Defender machine risk score level | Maester | Medium | Intune |
 | [MT.1217](./MT.1217) | Ensure macOS LAPS is configured on Automated Device Enrollment profiles | Maester | High | Intune |
+| [MT.1223](./MT.1223) | Agent Identities should not have high-risk Microsoft Graph permissions (Preview) | Maester | High | Entra |
 | [ORCA.100](./ORCA.100) | Bulk Complaint Level threshold is between 4 and 6. | ORCA | Medium | EXO |
 | [ORCA.101](./ORCA.101) | Bulk is marked as spam. | ORCA | Medium | EXO |
 | [ORCA.102](./ORCA.102) | Advanced Spam filter options are turned off. | ORCA | Medium | EXO |

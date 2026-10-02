@@ -1,9 +1,8 @@
-import { Routes, Route, useLocation } from "react-router"
+import { useLocation } from "@/lib/router"
 import { useEffect, useRef } from "react"
 import { Sidebar, SidebarProvider } from "@/components/Sidebar"
 import { Breadcrumb } from "@/components/Breadcrumb"
 import { ThemeProvider } from "@/components/ThemeProvider"
-import { testResults } from "@/lib/testResults"
 import { TenantProvider } from "@/context/TenantContext"
 
 // Import pages
@@ -34,8 +33,17 @@ function ScrollToTop({ mainRef }: { mainRef: React.RefObject<HTMLElement | null>
   return null
 }
 
-function App() {
+function App({ testResults }: { testResults: unknown }) {
   const mainRef = useRef<HTMLElement>(null)
+  const { pathname } = useLocation()
+  const page = pathname === "/assets" ? <AssetsPage />
+    : pathname === "/settings" ? <SettingsPage />
+      : pathname === "/system" ? <SystemPage />
+        : pathname === "/config" ? <ConfigPage />
+          : pathname === "/view/excel" ? <ExcelPage />
+            : pathname === "/view/markdown" ? <MarkdownPage />
+              : pathname === "/view/print" ? <PrintPage />
+                : <HomePage />
 
   return (
     <ThemeProvider>
@@ -48,17 +56,7 @@ function App() {
               <main id={reportMainElementId} ref={mainRef} className="flex-1 overflow-auto">
                 <ScrollToTop mainRef={mainRef} />
                 <div className="p-6">
-                  <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/assets" element={<AssetsPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/system" element={<SystemPage />} />
-                    <Route path="/config" element={<ConfigPage />} />
-                    <Route path="/view/excel" element={<ExcelPage />} />
-                    <Route path="/view/markdown" element={<MarkdownPage />} />
-                    <Route path="/view/print" element={<PrintPage />} />
-                    <Route path="/:testResultAnchor" element={<HomePage />} />
-                  </Routes>
+                  {page}
                 </div>
               </main>
             </div>

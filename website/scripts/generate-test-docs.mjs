@@ -56,6 +56,14 @@ const suiteConfig = {
     description: "ORCA Exchange Online security configuration tests included in Maester.",
     overview: "These tests validate Exchange Online security configuration checks from ORCA.",
   },
+  ad: {
+    label: "Active Directory",
+    title: "Active Directory Tests",
+    sidebarLabel: "🔑 Active Directory",
+    description: "Active Directory inventory and security configuration tests for on-premises domains.",
+    overview:
+      "These tests collect and validate on-premises Active Directory configuration, including users, groups, GPOs, DNS, trusts, sites, and domain controllers.",
+  },
   other: {
     label: "Other",
     title: "Other Tests",
@@ -77,7 +85,11 @@ function walkFiles(dir, predicate = () => true) {
 }
 
 function yamlQuote(value) {
-  return JSON.stringify(String(value ?? ""));
+  // The MDX loader writes frontmatter strings into JavaScript without escaping backslashes, so
+  // "domain\username" becomes an invalid "\u" escape and fails the build. Doubling the backslash
+  // would fix that but shows "\\" in the page metadata, which Docusaurus parses separately, so
+  // swap in a look-alike (U+2216 SET MINUS) instead.
+  return JSON.stringify(String(value ?? "").replaceAll("\\", "\u2216"));
 }
 
 // Source paths are embedded in generated docs and used as contributors.mjs
@@ -155,7 +167,15 @@ function normalizeWhitespace(value) {
 }
 
 function trimDescription(value, max = 300) {
-  const text = normalizeWhitespace(value)
+  // Leading headings (e.g. "# Policy name" or "## Description") are labels, not summary text.
+  const lines = String(value ?? "").split("\n");
+  while (lines.length > 0 && /^\s*(?:#{1,6}\s|$)/.test(lines[0])) lines.shift();
+  const prose = lines
+    .join("\n")
+    // Markdown hard line breaks ("text\" at end of line) and escapes ("\*") are not plain text.
+    .replace(/\\(?=\r?$)/gm, "")
+    .replace(/\\([!-/:-@[-`{-~])/g, "$1");
+  const text = normalizeWhitespace(prose)
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/#{2,6}\s+/g, "")
     .replace(/<br\s*\/?\s*>/gi, " ");
@@ -170,9 +190,9 @@ function unique(values) {
 function parseTags(value = "") {
   const tags = [];
   const tagArgument = value.match(/-Tag\s+(.+?)(?=\s+-\w+|$)/i)?.[1] ?? "";
-  const regex = /["']([^"']+)["']/g;
+  const regex = /"([^"]+)"|'((?:[^']|'')+)'/g;
   let match;
-  while ((match = regex.exec(tagArgument))) tags.push(match[1]);
+  while ((match = regex.exec(tagArgument))) tags.push(match[1] ?? match[2].replaceAll("''", "'"));
   return tags;
 }
 
@@ -184,7 +204,9 @@ function normalizeMarkdown(markdown) {
     // match and every section would be emitted twice.
     .replace(/\r\n/g, "\n")
     .replace(/<br>/gi, "<br />")
-    .replace(/\[([^\]]+)\]\(#[^)]+\)/g, "$1");
+    .replace(/\[([^\]]+)\]\(#[^)]+\)/g, "$1")
+    // Sibling help files link to each other as "./Test-MtX.md", which does not exist under docs/tests.
+    .replace(/\]\(\.\/(Test-Mt[A-Za-z0-9]+)\.md\)/g, "](/docs/commands/$1)");
 }
 
 function parseCommentHelp(content) {
@@ -274,6 +296,7 @@ function suiteFrom(testId, tags, filePath) {
   if (testId.startsWith("CIS.")) return "cis";
   if (testId.startsWith("CISA.") || testId.startsWith("MS.")) return "cisa";
   if (testId.startsWith("ORCA.")) return "orca";
+  if (testId.startsWith("AD-")) return "ad";
   if (testId.startsWith("MT.")) return "maester";
   const lowerPath = relative(testsRoot, filePath).toLowerCase();
   if (lowerPath.includes("cisa")) return "cisa";
@@ -288,7 +311,7 @@ function categoryFrom(tags, filePath) {
   // Excludes benchmark-version tags (e.g. "CIS M365 v7.0.0", "CIS GitHub v1.2.0") too, so a
   // Describe-level version tag never wins over a more specific It-level "CIS E3 Level 1" tag
   // just because it appears first in the combined (Describe then It) tag list.
-  const candidates = tags.filter((tag) => !/^(MT\.|CIS\.|CISA\.|MS\.|EIDSCA\.|ORCA\.|L1$|L2$|Maester$|CIS$|CISA$|ORCA$|EIDSCA$|CIS\s+\S+\s+v[\d.]+$)/i.test(tag));
+  const candidates = tags.filter((tag) => !/^(MT\.|CIS\.|CISA\.|MS\.|EIDSCA\.|ORCA\.|AD-|L1$|L2$|Maester$|CIS$|CISA$|ORCA$|EIDSCA$|AD$|CIS\s+\S+\s+v[\d.]+$)/i.test(tag));
   if (candidates.length > 0) return candidates[0];
   const parts = relative(testsRoot, filePath).split(sep);
   const meaningfulParts = parts.slice(0, -1).filter((part) => !/^(maester|cis|cisa|eidsca|orca)$/i.test(part));
@@ -304,7 +327,7 @@ function findFunctionName(block) {
 }
 
 function findTestId(testName, tags) {
-  const idPattern = /^(MT\.\d+|CIS\.[A-Za-z0-9.]+|CISA\.[A-Za-z0-9.]+|EIDSCA\.[A-Z0-9]+|ORCA\.\d+(?:\.\d+)?)/i;
+  const idPattern = /^(MT\.\d+|CIS\.[A-Za-z0-9.]+|CISA\.[A-Za-z0-9.]+|EIDSCA\.[A-Z0-9]+|ORCA\.[\d.]+|AD-[A-Z]+-\d+)/i;
   const idFromName = testName.match(new RegExp(`${idPattern.source}:`, "i"))?.[1];
   const idFromTag = tags.find((tag) => idPattern.test(tag));
   return idFromName ?? idFromTag;
@@ -315,15 +338,15 @@ function parseTests() {
   for (const file of walkFiles(testsRoot, (path) => path.endsWith(".Tests.ps1"))) {
     const content = readFileSync(file, "utf8");
     const describes = [];
-    for (const match of content.matchAll(/Describe\s+["'][^"']+["']([^\r\n{]*)/gim)) {
+    for (const match of content.matchAll(/Describe\s+(?:"[^"]+"|'(?:[^']|'')+')([^\r\n{]*)/gim)) {
       describes.push({ index: match.index ?? 0, tags: parseTags(match[1] ?? "") });
     }
 
-    const itRegex = /It\s+["']([^"']+)["']([^\r\n{]*)\{/gim;
+    const itRegex = /It\s+(?:"([^"]+)"|'((?:[^']|'')+)')([^\r\n{]*)\{/gim;
     let match;
     while ((match = itRegex.exec(content))) {
-      const testName = match[1].trim();
-      const itArguments = match[2] ?? "";
+      const testName = (match[1] ?? match[2]?.replaceAll("''", "'") ?? "").trim();
+      const itArguments = match[3] ?? "";
       const blockStart = itRegex.lastIndex;
       const nextIt = content.slice(blockStart).search(/\n\s*It\s+["']/i);
       const block = nextIt === -1 ? content.slice(blockStart) : content.slice(blockStart, blockStart + nextIt);
@@ -383,9 +406,20 @@ function buildInventory() {
       ? trimDescription(doc.markdown)
       : trimDescription(doc.description || doc.synopsis || config.Title || test.rawTitle);
     const suite = suiteFrom(test.id, test.tags, test.filePath);
+    // CIS benchmark levels (L1/L2) live in Describe tags ("L1"/"L2" or
+    // "CIS E3 Level 1") and maester-config.json titles. When a test has no
+    // config title, prefix the level so generated titles stay consistent,
+    // e.g. "(L1) Ensure ...".
+    let title = config.Title ?? test.rawTitle;
+    if (!config.Title && test.id.startsWith("CIS.") && !/^\(L\d\)\s*/i.test(title)) {
+      const levelTag = test.tags.find((tag) => /^L[12]$/i.test(tag));
+      const levelFromSuite = test.tags.map((tag) => tag.match(/level\s*([12])\b/i)?.[1]).find(Boolean);
+      const level = levelTag ? levelTag.toUpperCase() : levelFromSuite ? `L${levelFromSuite}` : null;
+      if (level) title = `(${level}) ${title}`;
+    }
     testsById.set(key, {
       id: test.id,
-      title: config.Title ?? test.rawTitle,
+      title,
       rawTitle: test.rawTitle,
       description,
       severity: config.Severity ?? "Unknown",
@@ -571,6 +605,7 @@ Tags are used by Maester to identify and group related tests. They can also be u
   - **CISA and Microsoft Baseline**: Tags prefixed with \`CISA\` or \`MS\` (for example, \`CISA.M365.Baseline\` or \`MS.Azure.Baseline\`).
   - **EIDSCA**: Tags prefixed with \`EIDSCA\` (for example, \`EIDSCA.EntraID.2.1\`).
   - **ORCA**: Tags prefixed with \`ORCA\` (for example, \`ORCA.Exchange.1.1\`).
+  - **Active Directory**: Tags prefixed with \`AD\` (for example, \`AD.User\` or \`AD-USER-07\`).
   - **Maester**: Tags prefixed with \`Maester\` or \`MT\` (for example, \`MT.1001\` or \`MT.1024\`).
 - **Product areas** identify the products and services being tested, such as Azure, Defender XDR, Entra ID, Exchange, Microsoft 365, SharePoint, and Teams.
 - **Practices or capabilities** identify security topics such as authentication, Conditional Access (CA), Data Loss Prevention (DLP), Extended Security Posture Management (XSPM), Hybrid Identity, Privileged Access Management (PAM), and Privileged Identity Management (PIM).

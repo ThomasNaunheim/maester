@@ -65,6 +65,11 @@
    Connects to Microsoft Graph with additional privileged scopes such as **RoleEligibilitySchedule.ReadWrite.Directory** that are required for querying Global Administrator roles in Privileged Identity Management.
 
 .EXAMPLE
+   Connect-Maester -IncludePreview
+
+   Connects to Microsoft Graph with the additional scopes required by preview tests.
+
+.EXAMPLE
    Connect-Maester -Environment USGov -AzureEnvironment AzureUSGovernment -ExchangeEnvironmentName O365USGovGCCHigh
 
    Connects to US Government environments for Microsoft Graph, Azure, and Exchange Online.
@@ -115,6 +120,9 @@
       # If specified, the cmdlet will include the scopes for read write API endpoints. This is currently required for querying Global Administrator roles in PIM.
       [switch] $Privileged,
 
+      # If specified, the cmdlet will include scopes required by preview tests.
+      [switch] $IncludePreview,
+
       # If specified, the cmdlet will use the device code flow to authenticate to Graph and Azure.
       # This will open a browser window to prompt for authentication and is useful for non-interactive sessions and on Windows when SSO is not desired.
       [switch] $UseDeviceCode,
@@ -163,7 +171,29 @@
       [string]$SharePointCertificateThumbprint,
 
       # The GitHub organization login name to connect to when Service includes GitHub.
-      [string]$GitHubOrganization
+      [string]$GitHubOrganization,
+
+      # The Active Directory forest DNS name to discover when Service includes ActiveDirectory.
+      [object]$ActiveDirectoryForest,
+
+      # The Active Directory domain DNS name to discover when Service includes ActiveDirectory.
+      [object]$ActiveDirectoryDomain,
+
+      # The Active Directory domain controller to connect to when Service includes ActiveDirectory.
+      [object]$ActiveDirectoryServer,
+
+      # The credential used for the Active Directory LDAP connection.
+      [System.Management.Automation.PSCredential]$ActiveDirectoryCredential,
+
+      # The authentication mode used for the Active Directory LDAP connection.
+      [Alias('AuthMode')]
+      [ValidateSet('Negotiate', 'Kerberos', 'Ntlm', 'Basic')]
+      [string]$ActiveDirectoryAuthMode = 'Negotiate',
+
+      # The TLS mode used for the Active Directory LDAP connection. Auto tries LDAPS before StartTLS.
+      [Alias('TlsMode')]
+      [ValidateSet('Auto', 'Ldaps', 'StartTls')]
+      [string]$ActiveDirectoryTlsMode = 'Auto'
    )
 
    $__MtSession.Connections = $Service
@@ -351,7 +381,8 @@
             Write-Verbose 'Connecting to Microsoft Graph'
             try {
 
-               $scopes = Get-MtGraphScope -SendMail:$SendMail -SendTeamsMessage:$SendTeamsMessage -Privileged:$Privileged
+               $scopes = Get-MtGraphScope -SendMail:$SendMail -SendTeamsMessage:$SendTeamsMessage `
+                  -Privileged:$Privileged -IncludePreview:$IncludePreview
 
                $connectParams = @{
                   Scopes        = $scopes
@@ -372,7 +403,17 @@
 
                Write-Verbose "🦒 Connecting to Microsoft Graph with parameters:"
                Write-Verbose ($connectParams | ConvertTo-Json -Depth 5)
-               Connect-MgGraph @connectParams
+               try {
+                  Connect-MgGraph @connectParams -ErrorVariable graphConnectError
+               } finally {
+                  # Connect-MgGraph errors are non-terminating unless $ErrorActionPreference is Stop.
+                  # Check them for missing consent either way without changing how the error surfaces.
+                  if ($graphConnectError) {
+                     $null = Write-MtGraphConsentHelp -ErrorRecord $graphConnectError -GraphClientId $GraphClientId `
+                        -TenantId $TenantId -Environment $Environment `
+                        -SendMail:$SendMail -SendTeamsMessage:$SendTeamsMessage -Privileged:$Privileged -IncludePreview:$IncludePreview
+                  }
+               }
 
                #ensure TenantId
                if (-not $TenantId) {
@@ -476,31 +517,31 @@
       Connect-MtGitHub @connectGitHubParams
    }
 
-   # Active Directory connection validation is separate from OrderedImport because it has no module conflicts.
-   if ($Service -contains 'ActiveDirectory') {
-      Write-Verbose 'Validating Active Directory connectivity'
-      try {
-         $adRootDSE = Get-ADRootDSE -ErrorAction Stop
-         $__MtSession.ADConnection = @{
-            Connected                  = $true
-            DefaultNamingContext       = $adRootDSE.defaultNamingContext
-            ConfigurationNamingContext = $adRootDSE.configurationNamingContext
-            SchemaNamingContext        = $adRootDSE.schemaNamingContext
-            DomainController           = $adRootDSE.dnsHostName
-         }
-         Write-Verbose "Connected to AD: $($adRootDSE.dnsHostName)"
-      } catch [Management.Automation.CommandNotFoundException] {
-         $__MtSession.ADConnection = @{
-            Connected = $false
-            Error     = 'The Active Directory module is not installed. Please install RSAT-AD-PowerShell or run on a domain-joined machine.'
-         }
-         Write-Error 'The Active Directory module is not installed. Please install RSAT-AD-PowerShell or run on a domain-joined machine.'
-      } catch {
-         $__MtSession.ADConnection = @{
-            Connected = $false
-            Error     = $_.Exception.Message
-         }
-         Write-Error "Failed to connect to Active Directory: $($_.Exception.Message)"
-      }
-   }
+    # Active Directory connection validation is separate from OrderedImport because it has no module conflicts.
+    if ($Service -contains 'ActiveDirectory') {
+       Write-Verbose 'Connecting to Active Directory through the protocol-aware LDAP path'
+       Add-Type -AssemblyName System.DirectoryServices.Protocols
+       try {
+          $connectAdParameters = @{
+             AuthMode = $ActiveDirectoryAuthMode
+             TlsMode  = $ActiveDirectoryTlsMode
+          }
+
+          foreach ($selectorName in 'ActiveDirectoryForest', 'ActiveDirectoryDomain', 'ActiveDirectoryServer', 'ActiveDirectoryCredential') {
+             if ($PSBoundParameters.ContainsKey($selectorName)) {
+                $connectAdParameters[$selectorName] = $PSBoundParameters[$selectorName]
+             }
+          }
+
+          Connect-MtAdTarget @connectAdParameters
+          Write-Verbose ("Active Directory protocol evidence: resolved target '{0}', domain '{1}', forest '{2}', auth '{3}', TLS '{4}'." -f `
+                $__MtSession.ADConnection.ResolvedServer,
+                $__MtSession.ADConnection.ResolvedDomain,
+                $__MtSession.ADConnection.ResolvedForest,
+                $__MtSession.ADConnection.AuthenticationMode,
+                $__MtSession.ADConnection.TlsMode)
+       } catch {
+          Write-Error $_.Exception.Message
+       }
+    }
 } # end function Connect-Maester

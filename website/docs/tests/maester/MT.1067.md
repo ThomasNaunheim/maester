@@ -1,6 +1,6 @@
 ---
 title: "MT.1067 - Authentication methods policies should not reference deleted groups."
-description: "# Authentication method policies should not reference non-existent groups This test checks if all groups referenced in authentication method policies still exist in the tenant. Authentication method policies can reference groups in their includeTargets configuration. If a group is deleted but still…"
+description: "This test checks if all groups referenced in authentication method policies still exist in the tenant. Authentication method policies can reference groups in their includeTargets configuration. If a group is deleted but still referenced in an authentication method policy, it may cause the policy to…"
 slug: /tests/MT.1067
 className: generated-test-doc
 sidebar_class_name: hidden
@@ -17,7 +17,7 @@ keywords:
 
 # MT.1067 - Authentication methods policies should not reference deleted groups.
 
-<div className="test-byline"><div className="test-byline-avatars"><a className="test-byline-avatar test-byline-avatar--author" href="/contributors/samerde" title="Sam Erde · Original author"><img src="https://github.com/SamErde.png" alt="Sam Erde" /></a></div><div className="test-byline-meta"><span className="test-byline-text">Contributed by <a href="/contributors/samerde">Sam Erde</a></span><a className="test-byline-link" href="/contributors">All contributors →</a></div></div>
+<div className="test-byline"><div className="test-byline-avatars"><a className="test-byline-avatar test-byline-avatar--author" href="/contributors/samerde" title="Sam Erde · Original author"><img src="https://github.com/SamErde.png" alt="Sam Erde" /></a><a className="test-byline-avatar" href="/contributors/merill" title="Merill Fernando · Co-contributor"><img src="https://github.com/merill.png" alt="Merill Fernando" /></a></div><div className="test-byline-meta"><span className="test-byline-text">Contributed by <a href="/contributors/samerde">Sam Erde</a> with <a href="/contributors/merill">Merill Fernando</a></span><a className="test-byline-link" href="/contributors">All contributors →</a></div></div>
 
 ## Overview
 
