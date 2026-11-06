@@ -31,6 +31,7 @@
             EntraID        = @(
                 'AccessPackage'
                 'AccessPackageCatalog'
+                'AccessPackageCatalogDrift'
                 'AppRegistration'
                 'AuthenticationMethod'
                 'AuthorizationPolicy'

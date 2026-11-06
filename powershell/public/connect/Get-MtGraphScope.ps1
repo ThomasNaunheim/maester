@@ -99,6 +99,11 @@
         'AgentIdentityBlueprint.Read.All'
         'AgentIdentityBlueprintPrincipal.Read.All'
         'Application.Read.All'
+        'ConfigurationMonitoring.Read.All'
+        'CrossTenantInformation.ReadBasic.All'
+        'RemoteTenantGroups.Read.All'
+        'TenantGovernance-RelatedTenant.Read.All'
+        'TenantGovernance-Relationship.Read.All'
     )
 
     if ($IncludePreview) {
