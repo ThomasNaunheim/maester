@@ -145,7 +145,7 @@ Describe 'MT.1255 and MT.1256 complete governed group classification' {
 
             Should -Invoke Invoke-MtGraphRequest -Times 1 -Exactly -ParameterFilter { $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 74 }
             Should -Invoke Invoke-MtGraphRequest -Times 3 -Exactly -ParameterFilter {
-                $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 1 -and $UniqueId[0] -in $script:missingGroupIds -and $DisableCache
+                $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 1 -and $UniqueId[0] -in $script:missingGroupIds -and -not $DisableCache
             }
         }
     }
@@ -165,7 +165,7 @@ Describe 'MT.1255 and MT.1256 complete governed group classification' {
             Test-MtAccessPackageDrift -Scope $Scope | Should -Be $Expected
 
             Should -Invoke Invoke-MtGraphRequest -Times 1 -Exactly -ParameterFilter {
-                $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 1 -and $UniqueId[0] -eq $script:driftGroupId -and $DisableCache
+                $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 1 -and $UniqueId[0] -eq $script:driftGroupId -and -not $DisableCache
             }
         }
     }

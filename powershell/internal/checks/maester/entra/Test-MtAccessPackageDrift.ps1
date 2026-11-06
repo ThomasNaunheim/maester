@@ -157,7 +157,7 @@
                 foreach ($missingId in $missingIds) {
                     Write-Verbose "The group batch did not return '$missingId'; verifying it with an individual request."
                     try {
-                        $retriedGroups = @(Invoke-MtGraphRequest -RelativeUri 'groups' -UniqueId $missingId -Select 'id', 'isAssignableToRole' -DisableCache -ErrorAction Stop)
+                        $retriedGroups = @(Invoke-MtGraphRequest -RelativeUri 'groups' -UniqueId $missingId -Select 'id', 'isAssignableToRole' -ErrorAction Stop)
                     } catch {
                         $statusCode = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { $null }
                         if ($statusCode -ne 404) { throw }
