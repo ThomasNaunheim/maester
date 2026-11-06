@@ -108,6 +108,7 @@
                 @{ Key = 'data-loss-prevention'; Name = 'Data loss prevention' }
                 @{ Key = 'data-lifecycle-management'; Name = 'Data lifecycle management' }
                 @{ Key = 'insider-risk-management'; Name = 'Insider risk management' }
+                @{ Key = 'data-classification'; Name = 'Data classification' }
             )
         }
         @{
@@ -133,6 +134,17 @@
             )
         }
         @{
+            Key      = 'fabric'
+            Name     = 'Microsoft Fabric'
+            Aliases  = @('Fabric', 'Microsoft Fabric', 'Power BI')
+            Features = @(
+                @{ Key = 'export-and-sharing'; Name = 'Export and sharing settings' }
+                @{ Key = 'developer-settings'; Name = 'Developer settings' }
+                @{ Key = 'information-protection'; Name = 'Information protection' }
+                @{ Key = 'tenant-settings'; Name = 'Tenant settings' }
+            )
+        }
+        @{
             Key      = 'microsoft-365'
             Name     = 'Microsoft 365'
             Aliases  = @('Microsoft 365', 'M365')
@@ -151,6 +163,9 @@
                 @{ Key = 'access-management'; Name = 'Access management' }
                 @{ Key = 'management-groups'; Name = 'Management groups' }
                 @{ Key = 'backup'; Name = 'Backup' }
+                @{ Key = 'subscriptions'; Name = 'Subscriptions' }
+                @{ Key = 'network-security'; Name = 'Network security' }
+                @{ Key = 'sentinel'; Name = 'Microsoft Sentinel' }
             )
         }
         @{

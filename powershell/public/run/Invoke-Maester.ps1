@@ -8,9 +8,12 @@
 
     For more advanced configuration, you can directly use the Pester module and the Get-MtHtmlReport function.
 
-    By default, Invoke-Maester runs the tests that ship with Maester and the custom tests in the Custom folder of the current directory, except Active Directory tests, preview tests and long-running tests. With -Path, native custom tests (Test.*.ps1) are found anywhere under the path and Pester-format custom tests (*.Tests.ps1) only in a Custom folder. Folders are searched up to three levels deep. Active Directory tests run only after an explicit Connect-Maester -Service ActiveDirectory call succeeds.
+    By default, Invoke-Maester runs the tests that ship with Maester and the custom tests in the Custom folder of the current directory, except Active Directory tests, preview tests and long-running tests. With -Path, native custom tests (`Test.*.ps1`) are found anywhere under the path and Pester-format custom tests (`*.Tests.ps1`) only in a Custom folder. Folders are searched up to three levels deep. Active Directory tests run only after an explicit Connect-Maester -Service ActiveDirectory call succeeds.
 
-    -Product, -Feature, -Area, -Severity and -Suite select tests by their typed attributes. Each takes a list: the values of one selector are alternatives, and different selectors must all match. They combine the same way with -Tag and -TestId. The tags of Maester 2.x, such as CA or CIS, still select the same built-in tests.
+    -Product, -Feature, -Area, -Severity and -Suite select tests by their typed attributes. Each takes a list: the values of one selector are alternatives, and different selectors must all match. They combine the same way with -Tag and -TestId. -ExcludeProduct leaves out the tests of a product and wins over every selector. The tags of Maester 2.x, such as CA or CIS, still select the same built-in tests.
+
+    .PARAMETER ExcludeProduct
+    Do not run the tests of these products: keys such as entra or exchange, or an alias such as 'exo' or 'Entra ID'. Matches a test's Product or any of its RelatedProduct values, and '*' wildcards are allowed, as for -Product. Adds to Selection.ExcludeProduct in the run configuration and wins over -Product, -TestId and the other selectors. Excluded tests are reported as NotRun with the reason code ExcludedByProduct. A test without a product, such as a Pester-format custom test, is never excluded.
 
     .PARAMETER IncludeLongRunning
     Include tests that can take a long time to run in tenants with a large number of objects.
@@ -51,6 +54,11 @@
     Invoke-Maester -Product entra -Severity Critical, High
 
     Runs the Entra ID tests whose severity is Critical or High. Values of one selector are alternatives; different selectors must all match.
+
+    .EXAMPLE
+    Invoke-Maester -ExcludeProduct exchange
+
+    Runs the tests that ship with Maester and the custom tests, except the tests about Exchange Online (a test whose Product or RelatedProduct is exchange). Pester-format custom tests have no product and still run.
 
     .EXAMPLE
     Invoke-Maester -Suite cisa -Area authentication
@@ -174,6 +182,10 @@
         # Matches a test's Product or any of its RelatedProduct values. '*' wildcards are allowed.
         [string[]] $Product,
 
+        # Do not run the tests of these products, matched like -Product. Wins over every selector.
+        # A test without a product, such as a Pester-format custom test, is never excluded.
+        [string[]] $ExcludeProduct,
+
         # Only run the tests about these features of a product, for example conditional-access. '*' wildcards are allowed.
         [string[]] $Feature,
 
@@ -184,7 +196,7 @@
         # A severity set for a test in the run configuration is the one that counts.
         [string[]] $Severity,
 
-        # Only run the tests of these suites, for example Maester, CISA, CIS, EIDSCA, ORCA or AD. '*' wildcards are allowed.
+        # Only run the tests of these suites, for example Maester, CISA, CIS, ASD, EIDSCA, ORCA or AD. '*' wildcards are allowed.
         [string[]] $Suite,
 
         # Run these Maester Packs, by pack ID or code, for example ZTA or maester.zero-trust-assessment.
@@ -206,12 +218,15 @@
         # The path to the file to save the test results in html format. The filename should include an .html extension.
         [string] $OutputHtmlFile,
 
-        # Collect the affected objects: the consolidated list of objects the run touched.
-        # Adds the AffectedObjects property to the results, the Affected objects page to the html report and,
-        # with -OutputFolder, the <name>-affected-objects.json file (plus -affected-objects.csv with -ExportCsv).
-        # Off by default because it enlarges the report; it is enabled automatically when
-        # -RedactUserIdentity is used, since redaction is driven by the inventory.
+        # Affected objects are collected by default. The switch is kept so that older scripts still run.
         [switch] $IncludeAffectedObjects,
+
+        # Do not collect the affected objects: the consolidated list of objects the run touched.
+        # By default the results carry the AffectedObjects property, the html report has an Affected objects page
+        # when any test recorded an object and, with -OutputFolder, the <name>-affected-objects.json file is written
+        # (plus -affected-objects.csv with -ExportCsv). Use this switch to keep the report smaller. The objects are
+        # still collected when -RedactUserIdentity is used, since redaction is driven by them, but left out of the outputs.
+        [switch] $ExcludeAffectedObjects,
 
         # Replaces user identities (display names, user principal names and object ids) with stable
         # stable ids in the generated outputs.
@@ -353,6 +368,10 @@
     )
 
     end {
+        # Affected objects are on unless the caller turned them off. A variable of its own: PowerShell names are not
+        # case-sensitive, so $includeAffectedObjects would be the -IncludeAffectedObjects switch.
+        $keepAffectedObjects = -not $ExcludeAffectedObjects.IsPresent
+
         function GetDefaultFileName() {
             $timestamp = Get-Date -Format 'yyyy-MM-dd-HHmmss'
             return "TestResults-$timestamp.html"
@@ -383,14 +402,14 @@
                 $out.OutputMarkdownFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName).md"
                 $out.OutputMarkdownSummaryFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName)-summary.md"
                 $out.OutputJsonFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName).json"
-                if ($IncludeAffectedObjects.IsPresent) {
-                    # Added only when requested so the OutputFiles of runs that do not opt in are unchanged.
+                if ($keepAffectedObjects) {
+                    # Written only when a test recorded an object.
                     $out | Add-Member -MemberType NoteProperty -Name OutputAffectedObjectsJsonFile -Value (Join-Path $out.OutputFolder "$($out.OutputFolderFileName)-affected-objects.json") -Force
                 }
 
                 if ($ExportCsv.IsPresent) {
                     $out.OutputCsvFile = Join-Path $out.OutputFolder "$($out.OutputFolderFileName).csv"
-                    if ($IncludeAffectedObjects.IsPresent) {
+                    if ($keepAffectedObjects) {
                         $out | Add-Member -MemberType NoteProperty -Name OutputAffectedObjectsCsvFile -Value (Join-Path $out.OutputFolder "$($out.OutputFolderFileName)-affected-objects.csv") -Force
                     }
                 }
@@ -437,8 +456,8 @@
 
         # Redaction maps user identities onto their stable ids, so it needs the inventory even when
         # the caller did not ask for the Affected objects page. Collect it in that case, but only surface it
-        # in the results and output files when -IncludeAffectedObjects was actually requested.
-        $collectAffectedObjects = $IncludeAffectedObjects.IsPresent -or $RedactUserIdentity -ne 'None'
+        # in the results and output files when -ExcludeAffectedObjects was not used.
+        $collectAffectedObjects = $keepAffectedObjects -or $RedactUserIdentity -ne 'None'
 
         # Anonymous run events: one now and one when the run ends, so a run that never ends shows up
         # (Write-Telemetry says what is sent). Stage says how far a run that did not complete got.
@@ -514,12 +533,12 @@
         }
 
         $selection = Resolve-MtSelection -RunConfig $runConfig -Tag $Tag -ExcludeTag $ExcludeTag -TestId $TestId -ExcludeTestId $ExcludeTestId `
-            -Product $Product -Feature $Feature -Area $Area -Severity $Severity -Suite $Suite -Pack $Pack `
+            -Product $Product -ExcludeProduct $ExcludeProduct -Feature $Feature -Area $Area -Severity $Severity -Suite $Suite -Pack $Pack `
             -IncludePreview:$IncludePreview -IncludeLongRunning:$IncludeLongRunning
         if ($SkipBuiltIn) { $selection.BuiltIn = 'None' }
         # The selectors live in $selection from here on. A test runs in a child scope of this function, so a
         # test that reads a $Severity or $Product it never set would otherwise see the value of the parameter.
-        $Product = $Feature = $Area = $Severity = $Suite = $Pack = $null
+        $Product = $ExcludeProduct = $Feature = $Area = $Severity = $Suite = $Pack = $null
         $Tag = $selection.Tag
         $ExcludeTag = $selection.ExcludeTag
         $IncludePreview = [switch]$selection.IncludePreview
@@ -839,7 +858,9 @@
 
         # Stages 2, 5 and 6 for native tests: the tenant context, then selection and applicability.
         $nativeTests = @($nativeBuiltIn) + @($nativeCustom) + @($nativePack)
-        $neededServices = @($nativeTests | ForEach-Object { $_.Service } | Where-Object { $_ } | Select-Object -Unique)
+        # A service that only the tests of excluded products need is not read or connected.
+        $neededServices = @($nativeTests | Where-Object { -not (Test-MtProductExcluded -Selection $selection -Product (@($_.Product) + @($_.RelatedProduct))) } |
+                ForEach-Object { $_.Service } | Where-Object { $_ } | Select-Object -Unique)
         Write-MtProgress -Activity 'Starting Maester' -Status 'Reading the tenant context...' -Force
         # The dashboard shows the tenant and the services while they are read, and fills in each answer as it comes.
         $tenantStep = if ($console.Mode -eq 'Interactive') { Start-MtDashboardTenant -Renderer $renderer -Console $console -Service $(if ($neededServices) { $neededServices } else { @('Graph') }) }
@@ -915,6 +936,7 @@
             FileOrigin      = $fileOrigin
             Superseded      = $superseded
             TenantContext   = $tenantContext
+            PackSet         = @($packSet)
         }
 
         Write-MtProgress -Activity 'Starting Maester' -Status 'Discovering tests to run...' -Force
@@ -994,7 +1016,7 @@
                 }
             }
 
-            $maesterResults = ConvertTo-MtMaesterResult -PesterResults $PesterResults -OutputFiles $out -InvokeMaesterCommand $invokeMaesterCommand -PesterConfiguration $pesterConfig -SkipVersionCheck:$SkipVersionCheck -IncludeAffectedObjects:$collectAffectedObjects -RunContext $runContext -NativeRows $nativeRows -NativeDuration $nativeTimer.Elapsed
+            $maesterResults = ConvertTo-MtMaesterResult -PesterResults $PesterResults -OutputFiles $out -InvokeMaesterCommand $invokeMaesterCommand -PesterConfiguration $pesterConfig -SkipVersionCheck:$SkipVersionCheck -IncludeAffectedObjects:$collectAffectedObjects -RunContext $runContext -NativeRows $nativeRows -NativeDuration $nativeTimer.Elapsed -IncludePrevious
 
             # 'AllOutputs' redacts every generated output, 'HtmlOnly' leaves the machine readable
             # exports intact so findings can still be traced back to the real objects.
@@ -1006,8 +1028,13 @@
 
             # Drop the inventory again when it was only collected to drive redaction, so the reports
             # stay the size the caller asked for and the Affected objects page is not silently turned on.
-            if ($collectAffectedObjects -and -not $IncludeAffectedObjects.IsPresent) {
+            if ($collectAffectedObjects -and -not $keepAffectedObjects) {
                 $maesterResults.PSObject.Properties.Remove('AffectedObjects')
+            }
+            # The affected-objects files are written only when tests recorded objects, so the result does not list them
+            # otherwise. $out is the result's OutputFiles.
+            if (-not @($maesterResults.AffectedObjects | Where-Object { $_ }).Count) {
+                foreach ($name in 'OutputAffectedObjectsJsonFile', 'OutputAffectedObjectsCsvFile') { $out.PSObject.Properties.Remove($name) }
             }
 
             # Csv and Excel are produced by Convert-MtResultsToFlatObject, which writes the file
@@ -1058,7 +1085,8 @@
             if (![string]::IsNullOrEmpty($out.OutputAffectedObjectsCsvFile) -and $maesterResults.AffectedObjects) {
                 $output = $maesterResults.AffectedObjects | Select-Object System, AnchorKind, Type, Id, UniqueId, DisplayName, UserPrincipalName, PortalLink,
                 @{ Name = 'Tests'; Expression = { $_.Tests -join '; ' } },
-                @{ Name = 'Sources'; Expression = { $_.Sources -join '; ' } } |
+                @{ Name = 'Sources'; Expression = { $_.Sources -join '; ' } },
+                @{ Name = 'Facts'; Expression = { @($_.Facts | Where-Object { $_ } | ForEach-Object { "$($_.Name): $($_.Value)" }) -join '; ' } } |
                     ConvertTo-Csv -NoTypeInformation
                 if ($redactNonHtml) {
                     # Piped so the replacement regex is built once, not once per row.

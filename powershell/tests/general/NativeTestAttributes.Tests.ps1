@@ -164,8 +164,8 @@ Describe 'Attributes of the built-in tests' {
             }
 
             It 'Finds the suites that declare frameworks' {
-                @($script:frameworkSuites.Id | Sort-Object) | Should -Be @('CIS', 'CISA')
-                @($script:requirementsOf.Keys | Sort-Object) | Should -Be @('cis-github', 'cis-m365', 'cisa-scuba')
+                @($script:frameworkSuites.Id | Sort-Object) | Should -Be @('ASD', 'CIS', 'CISA')
+                @($script:requirementsOf.Keys | Sort-Object) | Should -Be @('cis-github', 'cis-m365', 'cisa-scuba', 'essential-eight', 'ism')
             }
 
             It 'Names an existing requirement when a Control refers to a framework shipped with Maester' {
@@ -269,6 +269,11 @@ Describe 'Taxonomy registry' {
 
     It 'Has no feature, area or resource type that no test uses' {
         $usedFeatures = @($script:tests | ForEach-Object { "$($_.Product)/$($_.Feature)" } | Select-Object -Unique)
+        # The results of a pack that ships with Maester use the taxonomy too: the Zero Trust Assessment pack places
+        # each of its results under a product and feature with its taxonomy.json.
+        foreach ($mapping in Get-ChildItem -Path (Join-Path $script:repoRoot 'packs') -Filter 'taxonomy.json' -Recurse -File) {
+            $usedFeatures += @(((Get-Content -LiteralPath $mapping.FullName -Raw | ConvertFrom-Json -AsHashtable).Tests.Values) | ForEach-Object { "$($_.Product)/$($_.Feature)" })
+        }
         $unusedFeatures = @(foreach ($product in $script:taxonomy.Products) { foreach ($key in $product.Features.Key) { if ("$($product.Key)/$key" -cnotin $usedFeatures) { "$($product.Key)/$key" } } })
         $unusedFeatures | Should -BeNullOrEmpty -Because 'a key that no test uses should be removed from the taxonomy'
         $script:areaKeys | Where-Object { $_ -cnotin @($script:tests.Area) } | Should -BeNullOrEmpty

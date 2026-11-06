@@ -1,0 +1,19 @@
+Organization-wide Fabric sharing links are disabled or limited to one or more security groups.
+
+An organization-wide link can grant access to tenant users who were not individually granted access. Restricting who can create these links reduces accidental internal disclosure; it does not govern external guests.
+
+#### Remediation action
+
+1. Sign in to the [Microsoft Fabric admin portal](https://app.powerbi.com/admin-portal) with a Fabric administrator account.
+2. Select **Tenant settings**.
+3. Scroll to **Export and Sharing settings**.
+4. Set **Allow shareable links to grant access to everyone in your organization** to **Disabled**, or choose **Enabled** with **Specific security groups** selected and defined. If the organization doesn't actively use this feature, keep it **Disabled**.
+5. Select **Apply**.
+
+#### Related links
+
+* [Export and sharing tenant settings](https://learn.microsoft.com/fabric/admin/service-admin-portal-export-sharing)
+* [CIS Microsoft 365 Foundations Benchmark v7.0.0](https://www.cisecurity.org/benchmark/microsoft_365)
+
+<!--- Results --->
+%TestResult%
