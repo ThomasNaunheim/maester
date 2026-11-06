@@ -15,7 +15,9 @@ Describe 'MT.1258 GDAP and Tenant Governance assessment with optional enrichment
             $script:serviceProviders = @()
             $script:skus = @()
             $script:relatedTenants = @()
+            $script:auditEvents = @()
             Mock Get-MtSetting { @() }
+            Mock Get-MgContext { [pscustomobject]@{ Environment = 'Global' } }
             Mock Add-MtTestResultDetail { }
             Mock Invoke-MtGraphRequest {
                 if ($RelativeUri -in $script:failedSources) { throw "Source unavailable: $RelativeUri" }
@@ -28,6 +30,7 @@ Describe 'MT.1258 GDAP and Tenant Governance assessment with optional enrichment
                     'subscribedSkus' { $script:skus }
                     'directory/tenantGovernance/relatedTenants' { $script:relatedTenants }
                     'roleManagement/directory/roleAssignments' { $script:roleAssignments }
+                    'auditLogs/directoryAudits' { $script:auditEvents }
                     'roleManagement/directory/roleDefinitions' {
                         @{ id = 'role-1'; displayName = 'Global Administrator'; isPrivileged = $true }
                     }
@@ -287,6 +290,73 @@ Describe 'MT.1258 GDAP and Tenant Governance assessment with optional enrichment
             Test-MtCrossTenantAdministrationRelationship | Should -BeTrue
             Should -Invoke Add-MtTestResultDetail -Times 1 -Exactly -ParameterFilter {
                 -not $Investigate -and $Result -like '*related tenants could not be read*'
+            }
+        }
+    }
+
+    It 'Skips outside the worldwide cloud without calling Graph' {
+        InModuleScope Maester {
+            Mock Get-MgContext { [pscustomobject]@{ Environment = 'USGov' } }
+            Test-MtCrossTenantAdministrationRelationship | Should -BeNullOrEmpty
+            Should -Invoke Add-MtTestResultDetail -Times 1 -Exactly -ParameterFilter { $SkippedBecause -eq 'Custom' -and $SkippedCustomReason -like '*USGov*' }
+            Should -Invoke Invoke-MtGraphRequest -Times 0 -Exactly
+        }
+    }
+
+    Context 'First recorded change from the audit log' {
+        BeforeEach {
+            InModuleScope Maester {
+                $script:governanceRelationships = @(@{
+                        id = 'relationship-1'; status = 'active'; governedTenantId = $script:ownTenantId
+                        governingTenantId = $script:adminTenantId; governingTenantName = 'Governing tenant'
+                    })
+                $script:newAuditEvent = {
+                    param([string] $Result, [string] $User, $Date = '2026-10-01T08:00:00Z')
+                    [pscustomobject]@{
+                        result = $Result; activityDisplayName = 'Update governance relationship'; activityDateTime = $Date
+                        initiatedBy = [pscustomobject]@{ user = [pscustomobject]@{ userPrincipalName = $User } }
+                    }
+                }
+            }
+        }
+
+        It 'Shows the first successful change and skips a failed attempt before it' {
+            InModuleScope Maester {
+                $script:auditEvents = @(
+                    (& $script:newAuditEvent 'failure' 'attacker@contoso.com')
+                    (& $script:newAuditEvent 'success' 'admin@contoso.com')
+                )
+                $null = Test-MtCrossTenantAdministrationRelationship
+                Should -Invoke Add-MtTestResultDetail -Times 1 -Exactly -ParameterFilter {
+                    $Result -like '*First recorded change (audit log)*' -and $Result -like '*admin@contoso.com*' -and
+                    $Result -notlike '*attacker@contoso.com*' -and $Result -notlike '*Approved by*'
+                }
+            }
+        }
+
+        It 'Shows a neutral note when the audit log holds no successful change' {
+            InModuleScope Maester {
+                $script:auditEvents = @(& $script:newAuditEvent 'failure' 'attacker@contoso.com')
+                $null = Test-MtCrossTenantAdministrationRelationship
+                Should -Invoke Add-MtTestResultDetail -Times 1 -Exactly -ParameterFilter {
+                    $Result -like '*No successful change found in the audit log*' -and $Result -notlike '*retention)_*'
+                }
+            }
+        }
+
+        It 'Shows an unknown date instead of failing when the event date cannot be read' {
+            InModuleScope Maester {
+                $script:auditEvents = @(& $script:newAuditEvent 'success' 'admin@contoso.com' $null)
+                { $null = Test-MtCrossTenantAdministrationRelationship } | Should -Not -Throw
+                Should -Invoke Add-MtTestResultDetail -Times 1 -Exactly -ParameterFilter { $Result -like '*admin@contoso.com*on an unknown date*' }
+            }
+        }
+
+        It 'Shows that the audit log is not available when it cannot be read' {
+            InModuleScope Maester {
+                $script:failedSources = @('auditLogs/directoryAudits')
+                $null = Test-MtCrossTenantAdministrationRelationship
+                Should -Invoke Add-MtTestResultDetail -Times 1 -Exactly -ParameterFilter { $Result -like '*Audit log not available*' }
             }
         }
     }

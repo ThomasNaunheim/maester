@@ -170,8 +170,11 @@ function Test-MtEntraTenantConfigurationDrift {
     # Without a run, the monitor is measured from its creation: a new monitor waits for its first run.
     $createdUtc = & $toUtc $monitor.createdDateTime
     $awaitingFirstRun = $isActive -and -not $runsError -and $null -eq $lastRun -and $createdUtc -and ($nowUtc - $createdUtc).TotalHours -le $overdueAfterHours
-    $isOverdue = $isActive -and -not $runsError -and -not $awaitingFirstRun -and ($null -eq $lastRun -or ($lastRunStarted -and ($nowUtc - $lastRunStarted).TotalHours -gt $overdueAfterHours))
-    $runFailed = $isActive -and -not $runsError -and $lastRun.runStatus -in @('failed', 'partiallySuccessful')
+    # A run without a readable start time cannot show that the monitor ran on schedule.
+    $isOverdue = $isActive -and -not $runsError -and -not $awaitingFirstRun -and ($null -eq $lastRun -or -not $lastRunStarted -or ($nowUtc - $lastRunStarted).TotalHours -gt $overdueAfterHours)
+    # Only a confirmed successful run shows that the drift list is complete. failed, partiallySuccessful,
+    # unknownFutureValue, a missing status or any status Microsoft Graph adds later needs investigation.
+    $runNotSuccessful = $isActive -and -not $runsError -and $null -ne $lastRun -and "$($lastRun.runStatus)" -ne 'successful'
 
     $entraPortal = $__MtSession.AdminPortalUrl.Entra
     $escape = {
@@ -396,7 +399,7 @@ function Test-MtEntraTenantConfigurationDrift {
 
     # Summary, then the monitor's status and last run.
     $testResult = $drifts.Count -eq 0
-    $runsIncomplete = $runFailed -or $isOverdue -or $awaitingFirstRun -or [bool]$runsError
+    $runsIncomplete = $runNotSuccessful -or $isOverdue -or $awaitingFirstRun -or [bool]$runsError
     if (-not $testResult) {
         $resourceCount = @($drifts | ForEach-Object { & $resourceKey $_ } | Select-Object -Unique).Count
         $testResultMarkdown = "$monitorLink reports **$($drifts.Count)** active configuration $(if ($drifts.Count -eq 1) { 'drift' } else { 'drifts' }) on $resourceCount $(if ($resourceCount -eq 1) { 'resource' } else { 'resources' }). Restore each setting to the desired value, or update the baseline if the change was intended."
@@ -407,7 +410,7 @@ function Test-MtEntraTenantConfigurationDrift {
     }
     $notes = @(
         if (-not $isActive) { '⏸️ The monitor is inactive and no longer detects drift. Check its permissions and turn it on again, or delete it.' }
-        if ($runFailed) { "⚠️ The last run did not complete successfully, so drift may be missing or out of date. Check the $(if ($entraPortal) { "[Monitor results]($monitorResultsUrl)" } else { '**Monitor results**' }) of the monitor." }
+        if ($runNotSuccessful) { "⚠️ The last run did not report success (status: $(if ($lastRun.runStatus) { Get-MtSafeMarkdown "$($lastRun.runStatus)" } else { 'none' })), so drift may be missing or out of date. Check the $(if ($entraPortal) { "[Monitor results]($monitorResultsUrl)" } else { '**Monitor results**' }) of the monitor." }
         if ($isOverdue) { "⏰ The monitor has not run as scheduled (every $frequency h)." }
         if ($awaitingFirstRun) { "⏳ The monitor has not run yet. Its first run is expected within $overdueAfterHours h of its creation; until then, no drift only means that the settings were not checked." }
         if ($runsError) { "❔ The monitor runs could not be read, so the last run is unknown ($(& $escape $runsError))." }

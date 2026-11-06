@@ -57,6 +57,7 @@
         Control = 'nist-800-53-r5:AC-6(5)',
         Service = 'Graph',
         Permission = ('Graph:Scope:Directory.Read.All', 'Graph:Scope:TenantGovernance-Relationship.Read.All', 'Graph:Scope:RemoteTenantGroups.Read.All'),
+        Cloud = ('Commercial', 'GCC'),
         Lifecycle = 'Preview',
         Author = 'Cloud-Architekt'
     )]
@@ -66,6 +67,14 @@
         # Include informational inbound admin-app user and application counts when Governance licensing is available.
         [bool] $IncludeTenantDiscovery = $true
     )
+
+    # Tenant Governance and remote tenant groups are only available in the worldwide Microsoft Graph service. The Cloud
+    # attribute is enforced only when the run config turns it on, so the check also skips itself outside Global.
+    $graphEnvironment = (Get-MgContext).Environment
+    if ($graphEnvironment -and $graphEnvironment -ne 'Global') {
+        Add-MtTestResultDetail -SkippedBecause Custom -SkippedCustomReason "Tenant Governance is not available in the $graphEnvironment cloud."
+        return $null
+    }
 
     $entraPortal = $__MtSession.AdminPortalUrl.Entra
     $nowUtc = (Get-Date).ToUniversalTime()
@@ -308,22 +317,30 @@
         "$marker🏢 $linked · ``$TenantId``"
     }
 
-    # Who approved a relationship: only the audit log knows, and only within its retention (30 days by default).
-    $findApproval = {
+    # The first successful change to an object that the audit log records, and who made it. Which audit activity
+    # approves a relationship is not confirmed, and the audit log keeps entries only within its retention (30 days by
+    # default), so this is shown as the first recorded change, not as proof of who approved the relationship.
+    # Found is $false when the log could not be read or holds no successful change for the object.
+    $findFirstChange = {
         param([string] $TargetId)
         try {
             $audit = @(Invoke-MtGraphRequest -RelativeUri 'auditLogs/directoryAudits' -ApiVersion v1.0 `
                     -Filter "targetResources/any(t:t/id eq '$TargetId')" -QueryParameters @{ '$orderby' = 'activityDateTime asc'; '$top' = '10' } -DisablePaging -ErrorAction Stop)
         } catch {
             Write-Verbose "Could not read the audit log for $($TargetId): $($_.Exception.Message)"
-            return 'Not available'
+            return [pscustomobject]@{ Found = $false; Text = '_Audit log not available_' }
         }
-        $entry = $audit | Where-Object { $_.initiatedBy.user.userPrincipalName -or $_.initiatedBy.user.displayName -or $_.initiatedBy.app.displayName } | Select-Object -First 1
-        if (-not $entry) { return '_Not in the audit log (older than its retention)_' }
+        # A failed or rejected attempt did not change the object.
+        $entry = $audit | Where-Object {
+            "$($_.result)" -eq 'success' -and ($_.initiatedBy.user.userPrincipalName -or $_.initiatedBy.user.displayName -or $_.initiatedBy.app.displayName)
+        } | Select-Object -First 1
+        if (-not $entry) { return [pscustomobject]@{ Found = $false; Text = '_No successful change found in the audit log_' } }
         $who = if ($entry.initiatedBy.user.userPrincipalName) { "👤 $(Get-MtSafeMarkdown $entry.initiatedBy.user.userPrincipalName)" }
         elseif ($entry.initiatedBy.user.displayName) { "👤 $(Get-MtSafeMarkdown $entry.initiatedBy.user.displayName)" }
         else { "🧩 $(Get-MtSafeMarkdown $entry.initiatedBy.app.displayName)" }
-        "$who · $(Get-MtSafeMarkdown $entry.activityDisplayName) on $((& $toUtc $entry.activityDateTime).ToString('yyyy-MM-dd', [cultureinfo]::InvariantCulture))"
+        $date = & $toUtc $entry.activityDateTime
+        $dateText = if ($date) { $date.ToString('yyyy-MM-dd', [cultureinfo]::InvariantCulture) } else { 'an unknown date' }
+        [pscustomobject]@{ Found = $true; Text = "$who · $(Get-MtSafeMarkdown $entry.activityDisplayName) on $dateText" }
     }
 
     $assignmentsByTenant = @{}
@@ -460,7 +477,7 @@
 
     if ($shownGovernance.Count -gt 0) {
         $testResultMarkdown += "`n`n### 🏛️ Tenant Governance`n`n"
-        $testResultMarkdown += "| Governing tenant | Established | Approved by | Roles granted (governing tenant group: roles) | Apps provisioned in this tenant | Admin app sign-ins (inbound) |`n| --- | --- | --- | --- | --- | --- |`n"
+        $testResultMarkdown += "| Governing tenant | Established | First recorded change (audit log) | Roles granted (governing tenant group: roles) | Apps provisioned in this tenant | Admin app sign-ins (inbound) |`n| --- | --- | --- | --- | --- | --- |`n"
         foreach ($relationship in $shownGovernance) {
             $tenantId = "$($relationship.governingTenantId)"
             $url = if ($entraPortal) { "$($entraPortal)#view/Microsoft_Entra_TenantManagement/TenantDetails.ReactView/id/$tenantId/selectedTab/relationship" } else { $null }
@@ -479,7 +496,7 @@
                 })
             $rolesText = if ($roles.Count -gt 0) { $roles -join ' \| ' } else { '_None_' }
             $appsText = if ($apps.Count -gt 0) { $apps -join ' \| ' } else { '_None_' }
-            $testResultMarkdown += "| $(& $formatTenant $tenantId $relationship.governingTenantName $url) | $created | $(& $findApproval "$($relationship.id)") | $rolesText | $appsText | $(& $formatAdminSignIns $tenantId) |`n"
+            $testResultMarkdown += "| $(& $formatTenant $tenantId $relationship.governingTenantName $url) | $created | $((& $findFirstChange "$($relationship.id)").Text) | $rolesText | $appsText | $(& $formatAdminSignIns $tenantId) |`n"
         }
     }
 
@@ -514,8 +531,8 @@
                 # Legacy delegated admin privileges (DAP) give the partner standing roles such as Global Administrator.
                 $dapRoles = @($partner.roleIds | Where-Object { $_ })
                 if ($dapRoles.Count -gt 0) { "⚠️ **Legacy DAP roles:** $(@($dapRoles | ForEach-Object { & $formatRole "$_" $null } | Sort-Object) -join ', ')" }
-                $approval = & $findApproval $tenantId
-                if ($approval -and $approval -notlike '_Not in the audit log*' -and $approval -ne 'Not available') { "✅ $approval" }
+                $firstChange = & $findFirstChange $tenantId
+                if ($firstChange.Found) { "📝 First recorded change: $($firstChange.Text)" }
             )
             $supportUrl = if ($partner.supportUrl -and "$($partner.supportUrl)" -match '^https?://') { "$($partner.supportUrl)".Replace(')', '%29') } else { $null }
             $support = @(

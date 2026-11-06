@@ -84,8 +84,11 @@ Describe 'MT.1254 Tenant Configuration Management drift' {
 
     It 'Investigates no drift when <Condition>' -ForEach @(
         @{ Condition = 'the monitor is inactive'; Note = '*inactive and no longer detects drift*' }
-        @{ Condition = 'the last run failed'; Note = '*did not complete successfully*' }
-        @{ Condition = 'the last run was partially successful'; Note = '*did not complete successfully*' }
+        @{ Condition = 'the last run failed'; Note = '*did not report success (status: failed)*' }
+        @{ Condition = 'the last run was partially successful'; Note = '*did not report success (status: partiallySuccessful)*' }
+        @{ Condition = 'the last run status is unknownFutureValue'; Note = '*did not report success (status: unknownFutureValue)*' }
+        @{ Condition = 'the last run has no status'; Note = '*did not report success (status: none)*' }
+        @{ Condition = 'the last run has no start time'; Note = '*has not run as scheduled*' }
         @{ Condition = 'the monitor is overdue'; Note = '*has not run as scheduled*' }
         @{ Condition = 'the runs cannot be read'; Note = '*runs could not be read*' }
     ) {
@@ -95,6 +98,9 @@ Describe 'MT.1254 Tenant Configuration Management drift' {
                 'the monitor is inactive' { $script:monitor.status = 'inactive'; $script:monitor.inactivationReason = 'Missing permissions' }
                 'the last run failed' { $script:runs[0].runStatus = 'failed' }
                 'the last run was partially successful' { $script:runs[0].runStatus = 'partiallySuccessful' }
+                'the last run status is unknownFutureValue' { $script:runs[0].runStatus = 'unknownFutureValue' }
+                'the last run has no status' { $script:runs[0].runStatus = $null }
+                'the last run has no start time' { $script:runs[0].runInitiationDateTime = $null }
                 'the monitor is overdue' { $script:runs[0].runInitiationDateTime = $script:now.AddHours(-20).ToString('o') }
                 'the runs cannot be read' { $script:runsFail = $true }
             }
