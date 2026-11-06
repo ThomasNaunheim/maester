@@ -127,6 +127,65 @@ Describe 'MT.1255 and MT.1256 complete governed group classification' {
         }
     }
 
+    It 'Verifies only the three omitted groups in a batch of 74 and accepts confirmed deletions' {
+        InModuleScope Maester {
+            $script:allGroupIds = @(1..74 | ForEach-Object { '00000000-0000-0000-0000-{0:d12}' -f $_ })
+            $script:missingGroupIds = @($script:allGroupIds[-3..-1])
+            $script:driftSummaries = @()
+            $script:groupResponses = @($script:allGroupIds | Where-Object { $_ -notin $script:missingGroupIds } |
+                    ForEach-Object { @{ id = $_; isAssignableToRole = $true } })
+            Mock Invoke-MtGraphRequest {
+                $script:allGroupIds | ForEach-Object { @{ originId = $_; originSystem = 'AadGroup' } }
+            } -ParameterFilter { $RelativeUri -eq 'identityGovernance/entitlementManagement/catalogs/catalog-1/resources' }
+            Mock Invoke-MtGraphRequest {
+                throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('Not found', [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::NotFound))
+            } -ParameterFilter { $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 1 -and $UniqueId[0] -in $script:missingGroupIds }
+
+            Test-MtAccessPackageDrift -Scope RoleAssignableGroup | Should -BeTrue
+
+            Should -Invoke Invoke-MtGraphRequest -Times 1 -Exactly -ParameterFilter { $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 74 }
+            Should -Invoke Invoke-MtGraphRequest -Times 3 -Exactly -ParameterFilter {
+                $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 1 -and $UniqueId[0] -in $script:missingGroupIds -and $DisableCache
+            }
+        }
+    }
+
+    It 'Recovers an omitted privileged group before evaluating the <Scope> scope' -ForEach @(
+        @{ Scope = 'RoleAssignableGroup'; Expected = $false }
+        @{ Scope = 'Group'; Expected = $true }
+    ) {
+        InModuleScope Maester -Parameters @{ Scope = $Scope; Expected = $Expected } {
+            param($Scope, $Expected)
+            $script:groupResponses = @($script:groupResponses[0])
+            $script:groupResponses[0].isAssignableToRole = $false
+            Mock Invoke-MtGraphRequest {
+                @{ id = $script:driftGroupId; isAssignableToRole = $true }
+            } -ParameterFilter { $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 1 -and $UniqueId[0] -eq $script:driftGroupId }
+
+            Test-MtAccessPackageDrift -Scope $Scope | Should -Be $Expected
+
+            Should -Invoke Invoke-MtGraphRequest -Times 1 -Exactly -ParameterFilter {
+                $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 1 -and $UniqueId[0] -eq $script:driftGroupId -and $DisableCache
+            }
+        }
+    }
+
+    It 'Does not treat an omitted group as deleted when its individual lookup returns HTTP <Status>' -ForEach @(
+        @{ Status = 403 }, @{ Status = 503 }
+    ) {
+        InModuleScope Maester -Parameters @{ Status = $Status } {
+            param($Status)
+            $script:groupResponses = @($script:groupResponses[0])
+            Mock Invoke-MtGraphRequest {
+                throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('Group lookup failed', [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]$Status))
+            } -ParameterFilter { $RelativeUri -eq 'groups' -and @($UniqueId).Count -eq 1 }
+
+            { Test-MtAccessPackageDrift -Scope RoleAssignableGroup } | Should -Throw '*Group lookup failed*'
+            { Test-MtAccessPackageDrift -Scope Group } | Should -Throw '*Group lookup failed*'
+            Should -Invoke Add-MtTestResultDetail -Times 0 -Exactly
+        }
+    }
+
     It 'Names the Graph error code when a group cannot be read' {
         InModuleScope Maester {
             $script:groupResponses = @($script:groupResponses[0], @{ error = @{ code = 'Authorization_RequestDenied'; message = 'Insufficient privileges.' } })

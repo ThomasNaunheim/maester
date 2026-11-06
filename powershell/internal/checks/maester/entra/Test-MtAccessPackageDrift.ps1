@@ -126,10 +126,8 @@
                     throw "Could not classify governed group '$groupId': the resource identifier is not a group object ID."
                 }
             }
-            # Batch requests can return an error body without throwing, and the error body does not name the group.
-            # Require exactly one usable response for every requested group before splitting either scope: a missing
-            # group is not evidence of an ordinary group. A deleted group (404) has no members and can hold no role,
-            # so groups are treated as deleted only when every missing group is accounted for by a 404.
+            # The Graph helper omits batch 404 responses. Verify missing groups individually before treating them
+            # as deleted: an incomplete batch response is not evidence that a group cannot hold a role.
             try {
                 $groups = @(Invoke-MtGraphRequest -RelativeUri 'groups' -UniqueId $groupIds -Select 'id', 'isAssignableToRole' -ErrorAction Stop)
             } catch {
@@ -149,10 +147,29 @@
                 throw 'Could not classify governed groups: Microsoft Graph returned a group response without a requested group ID.'
             }
             $missingIds = @($groupIds | Where-Object { $groupId = $_; -not ($resolved | Where-Object { "$($_.id)" -eq $groupId }) })
-            if ($missingIds.Count -ne $errorResponses.Count) {
-                throw "Could not classify governed groups: Microsoft Graph returned $($errorResponses.Count) not-found responses for $($missingIds.Count) unresolved of $($groupIds.Count) groups."
+            $deletedIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            if ($errorResponses.Count -gt 0) {
+                if ($missingIds.Count -ne $errorResponses.Count) {
+                    throw "Could not classify governed groups: Microsoft Graph returned $($errorResponses.Count) not-found responses for $($missingIds.Count) unresolved of $($groupIds.Count) groups."
+                }
+                foreach ($missingId in $missingIds) { $null = $deletedIds.Add($missingId) }
+            } else {
+                foreach ($missingId in $missingIds) {
+                    Write-Verbose "The group batch did not return '$missingId'; verifying it with an individual request."
+                    try {
+                        $retriedGroups = @(Invoke-MtGraphRequest -RelativeUri 'groups' -UniqueId $missingId -Select 'id', 'isAssignableToRole' -DisableCache -ErrorAction Stop)
+                    } catch {
+                        $statusCode = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { $null }
+                        if ($statusCode -ne 404) { throw }
+                        $null = $deletedIds.Add($missingId)
+                        continue
+                    }
+                    if ($retriedGroups.Count -ne 1 -or "$($retriedGroups[0].id)" -ne $missingId) {
+                        throw "Could not classify governed group '$missingId': the individual request did not return exactly the requested group."
+                    }
+                    $groups += $retriedGroups
+                }
             }
-            $deletedIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$missingIds, [System.StringComparer]::OrdinalIgnoreCase)
             foreach ($deletedId in $deletedIds) { Write-Verbose "Governed group $deletedId no longer exists; it is not role-assignable." }
             foreach ($groupId in $groupIds) {
                 if ($deletedIds.Contains($groupId)) { continue }

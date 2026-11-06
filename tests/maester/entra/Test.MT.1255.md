@@ -17,7 +17,7 @@ What the report covers:
 
 The check needs a Microsoft Entra ID Governance or Microsoft Entra Suite licence, and is skipped without it. Maester reads the report and the catalogs with the `EntitlementManagement.Read.All` permission. With delegated access, results are limited to the catalogs the signed-in user can read; the Global Administrator, Identity Governance Administrator, Directory Reader, Reports Reader, Catalog Owner and Catalog Reader roles can view the report.
 
-If Maester cannot read whether a governed group is role-assignable, the check reports **Error** rather than a result. Restore read access to the groups and run it again.
+Groups omitted from a batch response are checked individually. Only a confirmed HTTP 404 is treated as a deleted group. If Maester cannot read whether a governed group is role-assignable, the check reports **Error** rather than a result. Restore read access to the groups and run it again.
 
 #### Remediation action
 
